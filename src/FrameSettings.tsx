@@ -1,3 +1,4 @@
+import OpenIcon from './OpenIcon'
 import { useMemo, useState } from 'react'
 import { ChoiceField, Field } from './SettingControls'
 import type { ControlLabelProps } from './SettingControls'
@@ -78,7 +79,7 @@ export default function FrameSettings({settings:s,onChange,plan,prices,products,
         <Field label="Extra edge clearance" unit="mm"><NumberInput value={s.pedestalClearance??0} onChange={pedestalClearance=>set({pedestalClearance,edgeDetailConfirmed:false})} min={0} max={300}/></Field>
       </section>
       <section className="support-settings-group"><h3>Product checks</h3><ChoiceField label="Connection confirmation" value={!!s.edgeDetailConfirmed} options={[{value:false,label:'Not confirmed'},{value:true,label:'Confirmed'}]} onChange={edgeDetailConfirmed=>set({edgeDetailConfirmed})}/><ChoiceField label="Board compatibility confirmation" value={s.confirmed} options={[{value:false,label:'Not confirmed'},{value:true,label:'Confirmed'}]} onChange={confirmed=>set({confirmed})}/></section>
-      <details className="product-reference"><summary>Product references</summary><p><a href={PRODUCT_SOURCES.frame} target="_blank" rel="noreferrer">BetterDeck Alu-Joist system ↗</a></p><p><a href={PRODUCT_SOURCES.pedestals} target="_blank" rel="noreferrer">BetterDeck pedestal catalogue ↗</a></p></details>
+      <details className="product-reference"><summary>Product references</summary><p><a href={PRODUCT_SOURCES.frame} target="_blank" rel="noreferrer">BetterDeck Alu-Joist system <OpenIcon/></a></p><p><a href={PRODUCT_SOURCES.pedestals} target="_blank" rel="noreferrer">BetterDeck pedestal catalogue <OpenIcon/></a></p></details>
     </details>
     {confirmations?<p className="support-confirmation-note">{confirmations} product {confirmations===1?'check':'checks'} to confirm in Advanced settings.</p>:null}
   </div>

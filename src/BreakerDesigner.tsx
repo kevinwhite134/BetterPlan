@@ -1,3 +1,4 @@
+import OpenIcon from './OpenIcon'
 import PlanRotation from './PlanRotationControls'
 import { rotatedViewBox } from './planRotation'
 import { boardRings, physicalCutouts, ringPath } from './shapeGeometry'
@@ -107,7 +108,7 @@ export default function BreakerDesigner({settings:s,plan,onApply,onDirtyChange}:
         <div className="breaker-alignment-tools"><Field label="Align selected breaker"><select aria-label={`Snap breaker ${activeIndex+1} to corner`} value="" onChange={e=>{if(e.target.value!=='')update(positions,activeIndex,+e.target.value)}}><option value="">Choose alignment…</option><option value={run/2}>Deck centre · {(run/2).toFixed(2)} m</option>{corners.filter(x=>x>.1&&x<run-.1).map(x=><option key={x} value={x}>Corner line · {x.toFixed(2)} m</option>)}</select></Field><div className="full-stock-actions" role="group" aria-label="Align a full stock board"><button type="button" className="button secondary" onClick={()=>fullStock(activeIndex,'before')}>Full board before</button><button type="button" className="button secondary" onClick={()=>fullStock(activeIndex,'after')}>Full board after</button></div></div>
       </>:null}
     </section>
-    <div className="editor-footer"><button className="button secondary" onClick={()=>{setPositions(s.breakerMode==='manual'?[...(s.breakerPositions||[])]:[...(plan?.boards.breakers||[])]);setCount(s.breakerMode==='manual'?(s.breakerPositions??[]).length:plan?.boards.breakers.length??0);setChanged(false);setMirror(false);setSelected(0);setMessage('')}}>Discard draft</button><span>{unresolved?'Adjust the draft before applying.':positions.length+' breaker guides · ready to apply'}</span><button className="button primary" disabled={!preview.boards||count!==positions.length} onClick={()=>{onApply(draft);setChanged(false);setMessage('')}}>Apply breaker layout ↗</button></div>
+    <div className="editor-footer"><button className="button secondary" onClick={()=>{setPositions(s.breakerMode==='manual'?[...(s.breakerPositions||[])]:[...(plan?.boards.breakers||[])]);setCount(s.breakerMode==='manual'?(s.breakerPositions??[]).length:plan?.boards.breakers.length??0);setChanged(false);setMirror(false);setSelected(0);setMessage('')}}>Discard draft</button><span>{unresolved?'Adjust the draft before applying.':positions.length+' breaker guides · ready to apply'}</span><button className="button primary" disabled={!preview.boards||count!==positions.length} onClick={()=>{onApply(draft);setChanged(false);setMessage('')}}>Apply breaker layout <OpenIcon/></button></div>
     {s.joints==='butt'?<p className="designer-hint">Applying this design uses breaker boards with no infill butt joints. Breaker boards may have supported butt joints only where stock is too short.</p>:null}
   </div>
 }

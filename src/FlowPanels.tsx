@@ -1,3 +1,4 @@
+import OpenIcon from './OpenIcon'
 import type { Plan, Settings } from './planner'
 import { ChoiceField, Field } from './SettingControls'
 import { PRODUCT_SOURCES } from './productNames'
@@ -16,7 +17,7 @@ export function BoardFit({plan,settings:s}: {plan:Plan;settings:Settings}){
 export function SupportAudit({plan,settings:s}: {plan:Plan;settings:Settings}){
   return <section className="support-audit"><div className="audit-heading"><div><h3>{plan.frame.geometryPass?'Support geometry checks pass':'Support layout needs correction'}</h3></div><span className={`audit-badge ${plan.frame.geometryPass?'pass':'fail'}`}>{plan.frame.checks.filter(c=>c.ok).length}/{plan.frame.checks.length} checks</span></div>
     <p className="field-note">Report case {plan.frame.rule.sheet} · {s.load} kN/m² · Alu-Joist K Series · composite decking. Perimeter framing and connections require supplier design.</p>
-    <details className="audit-source"><summary>Product &amp; span-report references</summary><p>BetterDeck Aluminium Profiles Design, contract 1513-1, revision 2 (15 June 2021). PDF pages {plan.frame.rule.pages}. Joists ≤ 400 mm centres at 90° to boards; primary support span ≤ {plan.frame.rule.support*1000} mm{plan.frame.rule.bearer?`; secondary span ≤ ${plan.frame.rule.bearerSpacing*1000} mm`:''}.</p><p><a href={PRODUCT_SOURCES.frame} target="_blank" rel="noreferrer">BetterDeck Alu-Joist Decking System ↗</a></p></details>
+    <details className="audit-source"><summary>Product &amp; span-report references</summary><p>BetterDeck Aluminium Profiles Design, contract 1513-1, revision 2 (15 June 2021). PDF pages {plan.frame.rule.pages}. Joists ≤ 400 mm centres at 90° to boards; primary support span ≤ {plan.frame.rule.support*1000} mm{plan.frame.rule.bearer?`; secondary span ≤ ${plan.frame.rule.bearerSpacing*1000} mm`:''}.</p><p><a href={PRODUCT_SOURCES.frame} target="_blank" rel="noreferrer">BetterDeck Alu-Joist Decking System <OpenIcon/></a></p></details>
     {plan.frame.layoutStatus==='unbuildable'?<p className="support-resolution" role="status">{plan.frame.issues[0]} The amber draft is for inspection only; frame and pedestal quantities stay pending.</p>:null}
     <details className="audit-results" open={!plan.frame.geometryPass}><summary>Geometry checks</summary><div className="audit-checks">{plan.frame.checks.map(c=><div key={c.name} className={c.ok?'pass':'fail'}><span>{c.ok?'✓':'!'}</span><div><strong>{c.name}</strong><p>{c.detail}</p></div></div>)}</div></details>
     <details className="audit-product-note"><summary>Calculated projections &amp; product checks · provisional</summary>
