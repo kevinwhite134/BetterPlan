@@ -121,7 +121,7 @@ No backend/account/cloud sync is configured. Google font requests are optional; 
 
 ## Phone and tablet support editing
 
-On screens up to 1100 px wide, Supports shows the plan above the settings without a pinned scrolling panel. Edit supports opens a full-screen editor with Tools & checks (or Tools / selection) for drawing tools, exact coordinates and geometry checks. Choosing a tool returns to the plan. Tap twice to draw a member, drag a pedestal along its supporting frame, and use two fingers to pan or pinch to zoom. Zoom buttons and Fit deck are also available. Touch additions and removals happen on release so starting a pinch does not modify the draft. Undo, redo and Apply layout / Save draft remain available; edits are saved only when applied.
+On phone screens up to 760 px wide, Supports shows the plan above the settings without a pinned scrolling panel. Edit supports keeps the drawing tools visible above the plan, so changing tools takes one tap; selection details and geometry checks remain in a scrollable area below. Wider screens retain the side-by-side settings and plan, with the editor tools in the sidebar. Tap twice to draw a member, drag a pedestal along its supporting frame, and use two fingers to pan or pinch to zoom. Zoom buttons and Fit deck are also available. Touch additions and removals happen on release so starting a pinch does not modify the draft. Edits are saved only when applied.
 
 
 ## Product terminology

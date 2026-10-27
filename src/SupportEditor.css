@@ -13,51 +13,47 @@
 
 .support-check-badge{border-radius:5px;padding:8px 10px;font-size:11px;white-space:nowrap;background:#fff1df;color:#9b7044}.support-check-badge.passes{background:#edf4df;color:#50733b}.support-current-limits{margin-top:18px;padding-top:13px;border-top:1px solid #e0e6d8;font-size:12px}.support-current-limits summary{cursor:pointer}.support-current-limits p{margin-top:8px;color:#7e8a70}
 
-.support-editor-toolbar .support-tools-toggle{display:none}
+
+.support-mobile-tools{display:none}
 .support-touch-hint{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 16px;font-size:12px;color:#526747;background:#edf2e2}
 .support-touch-hint button{border:1px solid #cbd7bb;border-radius:6px;background:#fff;padding:8px;flex-shrink:0}
 .support-editor button,.support-editor summary,.support-editor select{touch-action:manipulation}
 .support-editor-inspector,.support-editor-toolbar{overscroll-behavior:contain}
-@media(max-width:1100px),(pointer:coarse){
-  .support-editor{inset:0;width:100%;height:100dvh;border-radius:0}
+@media(pointer:coarse){
   .support-editor button,.support-editor select,.support-editor input:not([type=checkbox]),.support-editor summary{min-height:44px}
   .support-editor input:not([type=checkbox]),.support-editor select{font-size:16px}
   .support-editor-toolbar label{min-height:44px;padding:4px;font-size:12px}
   .support-editor-toolbar input[type=checkbox]{width:20px;height:20px}
-  .support-editor-header{padding-top:max(10px,env(safe-area-inset-top));padding-left:max(14px,env(safe-area-inset-left));gap:10px}
-  .support-editor-footer{padding-bottom:max(10px,env(safe-area-inset-bottom));flex-wrap:wrap;gap:8px}
-  .support-editor-footer>div{max-width:none;flex:1 1 100%}
 }
-@media(max-width:1100px){
-  .support-editor-body{position:relative;display:flex;flex-direction:column}
-  .support-editor-drawing{flex:1}
-  .support-editor-inspector{display:none;min-height:0;order:1;flex:1;border:0;border-top:1px solid #dce3d2;padding:18px;overscroll-behavior:contain}
-  .tools-open .support-editor-inspector{display:block}
-  .tools-open .support-editor-drawing{flex:0 0 auto;order:0}
-  .tools-open .support-edit-canvas,.tools-open .support-touch-hint,.tools-open .support-editor-legend{display:none}
-  .support-editor-toolbar .support-tools-toggle{display:block;background:#eaf0d9;font-weight:600}
-  .support-editor-toolbar{padding:8px 12px;gap:6px;min-height:112px;align-content:start}
-  .support-editor-toolbar>.support-layer-toggles{display:flex;order:3;flex-basis:100%;flex-wrap:wrap;gap:6px}
+@media(max-width:760px){
+  .support-editor{inset:0;width:100%;height:100dvh;border-radius:0}
+  .support-editor-header{padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top));gap:10px}
+  .support-editor-header h2{font-size:18px}.support-editor-header small{font-size:8px}
+  .support-mobile-tools{display:block;padding:8px 12px;background:#fff;border-bottom:1px solid #dce3d2;flex-shrink:0}
+  .support-mobile-tools h3,.support-desktop-tools{display:none}
+  .support-mobile-tools .support-tool-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+  .support-tool-grid button{min-height:40px;font-size:11px;padding:7px 4px;text-align:center}
+  .support-editor-body{display:flex;flex-direction:column;min-height:0}
+  .support-editor-drawing{order:0;flex:1;min-height:0}
+  .support-editor-inspector{order:1;flex:0 1 auto;max-height:20dvh;min-height:0;padding:10px 12px;border:0;border-top:1px solid #dce3d2}
+  .support-editor-inspector .support-help{margin-top:0}
+  .support-editor-inspector section{margin-top:10px;padding-top:10px}
+  .support-editor-toolbar{padding:6px 12px;gap:6px;align-items:center}
+  .support-editor-toolbar button{min-height:40px;padding:6px 8px}
+  .support-editor-toolbar>.support-layer-toggles{display:none}
   .support-editor-toolbar>div:last-child{margin-left:auto}
-  .support-tool-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
   .support-coordinate-grid{grid-template-columns:1fr 1fr}
-  .support-editor-footer .button{flex:1 1 auto;font-size:12px;white-space:normal}
-  .support-editor-legend{padding:8px 12px;font-size:10px}
-}
-@media(max-width:480px){
-  .support-editor-header small{font-size:8px}.support-editor-header h2{font-size:18px}
-  .support-editor-toolbar button{padding:7px;font-size:11px}
-  .support-editor-toolbar>div{gap:4px}
-  .support-editor-toolbar label{font-size:11px}
-  .support-editor-footer small,.support-editor-legend>span:last-child{display:none}
-  .support-check-badge{white-space:normal;font-size:10px;padding:5px;flex:1 1 100%}
+  .support-editor input:not([type=checkbox]),.support-editor select{font-size:16px;min-height:44px}
+  .support-editor-footer{padding:8px 12px;padding-bottom:max(8px,env(safe-area-inset-bottom));flex-wrap:wrap;gap:6px}
+  .support-editor-footer>div{max-width:none;flex:1 1 100%}
+  .support-editor-footer .button{min-height:44px;flex:1 1 auto;font-size:11px;white-space:normal}
+  .support-editor-footer small,.support-editor-legend{display:none}
   .support-editor-footer>div span{font-size:11px}
+  .support-check-badge{white-space:normal;font-size:10px;padding:5px;flex:1 1 100%}
+  .support-touch-hint{padding:6px 12px;font-size:11px}
 }
-@media(max-height:600px) and (orientation:landscape){
-  .support-editor-header{padding:6px 12px}.support-editor-header small,.support-editor-footer>div,.support-editor-legend{display:none}
-  .support-editor-toolbar{min-height:56px}.support-editor-toolbar>.support-layer-toggles{display:none}
-  .support-touch-hint{padding:4px 12px}
-  .support-check-badge{flex:0 1 auto}
+@media(max-width:760px) and (max-height:500px) and (orientation:landscape){
+  .support-editor-header small,.support-editor-footer>div,.support-check-badge{display:none}
+  .support-mobile-tools .support-tool-grid{grid-template-columns:repeat(7,minmax(0,1fr))}
+  .support-editor-header{padding:4px 12px}.support-mobile-tools{padding:4px 12px}
 }
-
-@media(max-width:1100px){.support-editor-toolbar{display:grid;grid-template-columns:auto 1fr auto;min-height:0}.support-editor-toolbar>.support-history{justify-content:center}.support-editor-toolbar>.support-layer-toggles{grid-column:1/-1;grid-row:2}.support-editor-toolbar>div:last-child{margin-left:0}}
