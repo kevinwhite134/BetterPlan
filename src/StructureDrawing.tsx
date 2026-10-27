@@ -1,6 +1,7 @@
 import { memo, useMemo } from 'react'
 import { projectedStructure, structureGeometry, structurePaths } from './structureGeometry'
 import { isLargePreview } from './renderOverview'
+import { hardwareGeometry } from './hardwareGeometry'
 import type { Position3, StructureExposure } from './structureGeometry'
 import type { Plan, Settings, Point } from './planner'
 
@@ -14,6 +15,9 @@ const BatchedStructure=memo(function BatchedStructure({plan,settings,exposure,sh
   return <g className="structure-drawing overview-structure" data-pedestal-count={drawing.components.pedestals} data-member-count={drawing.components.members}>{drawing.paths.map((p,i)=><path key={i} d={p.path} fill={p.fill} data-kind={p.kind}/>)}</g>
 })
 const StructureDrawing=memo(function StructureDrawing(props:Parameters<typeof DetailedStructure>[0]){
-  return isLargePreview(props.plan)?<BatchedStructure {...props}/>:<DetailedStructure {...props}/>
+  const hardware=useMemo(()=>hardwareGeometry(props.plan,props.settings,props.exposure),[props.plan,props.settings,props.exposure])
+  const visible=useMemo(()=>projectedStructure(hardware,props.rotation,props.tilt),[hardware,props.rotation,props.tilt])
+  const path=visible.flatMap(p=>p.faces.map(f=>f.points.map((p,i)=>{const q=props.project(p);return `${i?'L':'M'}${q.x} ${q.y}`}).join('')+'Z')).join('')
+  return <>{isLargePreview(props.plan)?<BatchedStructure {...props}/>:<DetailedStructure {...props}/>}<g className="hardware-drawing" data-connector-count={hardware.length}><path d={path} fill="#1c221e"/><title>Continuous joiners, paired side joist joiners and perpendicular joist joiners</title></g></>
 })
 export default StructureDrawing

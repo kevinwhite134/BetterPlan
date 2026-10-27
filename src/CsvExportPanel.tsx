@@ -18,11 +18,13 @@ export default function CsvExport({plan,settings,prices,onDownload}:{plan:Plan;s
   const indices=columns.map(q=>report.headers.indexOf(q)),previewRows=(pricing?report.rows.filter(q=>q[0]==='Item'):report.rows).slice(0,8)
   const currency=new Intl.NumberFormat('en-IE',{style:'currency',currency:'EUR'}),rateCurrency=new Intl.NumberFormat('en-IE',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:4}),number=new Intl.NumberFormat('en-IE',{maximumFractionDigits:2})
   const excel=async()=>{setBusy(true);setError('');try{const [{exportDeckWorkbook},preview]=await Promise.all([import('./workbookExport'),deckPreviewPng(deckSvg)]);const data=await exportDeckWorkbook(plan,settings,prices,preview);onDownload('betterplan-deck-pack.xlsx',data,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')}catch{setError('The Excel workbook could not be created. Try again, or download the CSV.')}finally{setBusy(false)}}
+  const quotation=async()=>{setBusy(true);setError('');try{const [{exportQuotationPdf},{loadBetterDeckLogo},preview]=await Promise.all([import('./quotationPdf'),import('./pdfBrand'),deckPreviewPng(deckSvg)]);const logo=await loadBetterDeckLogo(),image=new Uint8Array(await (await fetch(preview)).arrayBuffer()),data=await exportQuotationPdf(plan,settings,prices,{logo,preview:image});onDownload('betterdeck-quotation.pdf',Uint8Array.from(data).buffer,'application/pdf')}catch{setError('The quotation PDF could not be created. Please try again.')}finally{setBusy(false)}}
   return <section className="csv-export" aria-labelledby="csv-export-title">
-    <div className="csv-export-heading"><div><h3 id="csv-export-title">Reports</h3></div><span className="export-file-tag">XLSX + CSV</span></div>
+    <div className="csv-export-heading"><div><h3 id="csv-export-title">Reports</h3></div><span className="export-file-tag">PDF + XLSX + CSV</span></div>
     <div className="csv-export-controls">
       <Field label="Report preview"><select value={kind} onChange={e=>setKind(e.target.value as CsvKind)}>{CSV_REPORTS.map(q=><option key={q.id} value={q.id}>{q.label}</option>)}</select></Field>
       <button className="button primary" aria-busy={busy} disabled={busy} onClick={excel}>{busy?'Creating workbook…':'↓ Excel pack'}</button>
+      <button className="button secondary" disabled={busy} onClick={quotation}>↓ Quotation PDF</button>
       <button className="button secondary" disabled={!!report.unavailable||!report.rows.length} onClick={()=>onDownload(`betterplan-${kind}.csv`,serializeCsv(report,delimiter))}>↓ CSV report</button>
     </div>
     {error?<p className="csv-unavailable" role="alert">{error}</p>:null}

@@ -1,5 +1,6 @@
 import type { Plan, Point, Settings } from './planner.ts'
 import { frameMemberName, pedestalReference } from './productNames.ts'
+import { frameHardware, PEDESTAL_COLUMN_DIAMETER, renderedMember } from './frameHardware.ts'
 
 export type Position3=Point&{z:number}
 export type StructureExposure='finished'|'boards'|'joists'|'bearers'|'pedestals'
@@ -19,16 +20,19 @@ export function structureGeometry(plan:Plan,s:Settings,exposure:StructureExposur
   if(showSupports||exposure==='pedestals')plan.frame.pedestals.forEach((point,i)=>{
     const p=physical(point),radius=(s.pedestalDiameter??150)/2000,adjustment=Math.max(0,head-ground),plate=Math.min(.008,adjustment/4)
     const cylinder=(r:number,top:number,bottom:number,light:string,dark:string)=>solid(Array.from({length:24},(_,i)=>({x:p.x+r*Math.cos(i*Math.PI/12),y:p.y+r*Math.sin(i*Math.PI/12)})),top,bottom,light,dark)
-    const faces=[...cylinder(radius,ground+plate,ground,'#566254','#303c32'),...cylinder(Math.min(.019,radius*.35),head-plate,ground+plate,'#52624f','#3d4c3e'),...cylinder(radius*.8,head,head-plate,'#64735d','#3d4c3e')]
+    const faces=[...cylinder(radius,ground+plate,ground,'#566254','#303c32'),...cylinder(Math.min(PEDESTAL_COLUMN_DIAMETER/2,radius*.8),head-plate,ground+plate,'#52624f','#3d4c3e'),...cylinder(radius*.8,head,head-plate,'#64735d','#3d4c3e')]
     parts.push({id:`pedestal-${i}`,kind:'pedestal',label:`${pedestalReference(s.pedestalName,i)} · ${s.pedestalDiameter??150} mm base · ${Math.round(adjustment*1000)} mm average adjustment`,centre:{...p,z:(head+ground)/2},faces})
   })
-  if(exposure!=='pedestals')plan.frame.members.forEach((member,i)=>{
+  const hardware=frameHardware(plan.frame,s.frameFaceWidth??35)
+  if(exposure!=='pedestals')plan.frame.members.forEach((original,i)=>{
+    const member=renderedMember(original,hardware.trims[i])
     if(exposure==='bearers'&&member.kind!=='bearer')return
     const a=physical(member.a),b=physical(member.b),length=Math.hypot(b.x-a.x,b.y-a.y);if(length<1e-9)return
     const half=(s.frameFaceWidth??35)/2000,nx=-(b.y-a.y)/length*half,ny=(b.x-a.x)/length*half
     const top=boardBottom-(member.kind==='bearer'?plan.frame.rule.joist/1000:0),bottom=top-member.size/1000
     const outline=[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},{x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}],colour=colours[member.kind]
-    parts.push({id:`member-${i}`,kind:member.kind==='bearer'?'bearer':'joist',label:`${frameMemberName(member.size,member.kind,member.role)} · ${Math.round(length*1000)} mm long · ${s.frameFaceWidth??35} mm top face`,centre:{x:(a.x+b.x)/2,y:(a.y+b.y)/2,z:(top+bottom)/2},faces:solid(outline,top,bottom,colour[0],colour[1])})
+    const centre=physical({x:(original.a.x+original.b.x)/2,y:(original.a.y+original.b.y)/2})
+    parts.push({id:`member-${i}`,kind:member.kind==='bearer'?'bearer':'joist',label:`${frameMemberName(member.size,member.kind,member.role)} · ${Math.round(Math.hypot(original.b.x-original.a.x,original.b.y-original.a.y)*1000)} mm long · ${s.frameFaceWidth??35} mm top face`,centre:{...centre,z:(top+bottom)/2},faces:solid(outline,top,bottom,colour[0],colour[1])})
   })
   return parts
 }
@@ -49,7 +53,7 @@ export function structurePaths(plan:Plan,s:Settings,exposure:StructureExposure,s
   const paths=new Map<string,{kind:StructurePath['kind'];fill:string;segments:string[]}>()
   const angle=rotation*Math.PI/180,t=tilt*Math.PI/180,view={x:Math.sin(angle)*Math.sin(t),y:Math.cos(angle)*Math.sin(t),z:Math.cos(t)}
   const physical=(p:Point)=>s.direction==='vertical'?{x:p.y,y:p.x}:p
-  const boardBottom=-s.board.thickness/1000,ground=-s.height/1000,head=boardBottom-(plan.frame.rule.joist+plan.frame.rule.bearer)/1000
+  const boardBottom=-s.board.thickness/1000,ground=-s.height/1000,head=boardBottom-(plan.frame.rule.joist+plan.frame.rule.bearer)/1000,hardware=frameHardware(plan.frame,s.frameFaceWidth??35)
   const polygon=(points:Position3[],fill:string,kind:StructurePath['kind'])=>{
     const segment=points.map((p,i)=>{const q=project(p);return `${i?'L':'M'}${Math.round(q.x*10000)/10000} ${Math.round(q.y*10000)/10000}`}).join('')+'Z',key=kind+fill
     let batch=paths.get(key);if(!batch){batch={kind,fill,segments:[]};paths.set(key,batch)}batch.segments.push(segment)
@@ -57,14 +61,15 @@ export function structurePaths(plan:Plan,s:Settings,exposure:StructureExposure,s
   let pedestals=0,members=0
   if(showSupports||exposure==='pedestals')for(const point of plan.frame.pedestals){
     pedestals++
-    const p=physical(point),radius=(s.pedestalDiameter??150)/2000,adjustment=Math.max(0,head-ground),plate=Math.min(.008,adjustment/4),stem=Math.min(.019,radius*.35)
+    const p=physical(point),radius=(s.pedestalDiameter??150)/2000,adjustment=Math.max(0,head-ground),plate=Math.min(.008,adjustment/4),stem=Math.min(PEDESTAL_COLUMN_DIAMETER/2,radius*.8)
     const circle=(r:number,z:number)=>overviewCircle.map(unit=>({x:p.x+r*unit.x,y:p.y+r*unit.y,z}))
     polygon(circle(radius,ground+plate),'#566254','pedestal')
     const nx=Math.cos(angle)*stem,ny=-Math.sin(angle)*stem
     polygon([{x:p.x-nx,y:p.y-ny,z:ground+plate},{x:p.x+nx,y:p.y+ny,z:ground+plate},{x:p.x+nx,y:p.y+ny,z:head-plate},{x:p.x-nx,y:p.y-ny,z:head-plate}],'#3d4c3e','pedestal')
     polygon(circle(radius*.8,head),'#64735d','pedestal')
   }
-  if(exposure!=='pedestals')for(const member of plan.frame.members){
+  if(exposure!=='pedestals')for(const [i,original] of plan.frame.members.entries()){
+    const member=renderedMember(original,hardware.trims[i])
     if(exposure==='bearers'&&member.kind!=='bearer')continue
     const a=physical(member.a),b=physical(member.b),length=Math.hypot(b.x-a.x,b.y-a.y);if(length<1e-9)continue
     members++

@@ -18,6 +18,7 @@
 .support-touch-hint{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 16px;font-size:12px;color:#526747;background:#edf2e2}
 .support-touch-hint button{border:1px solid #cbd7bb;border-radius:6px;background:#fff;padding:8px;flex-shrink:0}
 .support-editor button,.support-editor summary,.support-editor select{touch-action:manipulation}
+.support-edit-canvas.tool-select{cursor:default}.support-edit-canvas.tool-measure{cursor:crosshair}.support-member-handles circle{cursor:move}.support-rulers text,.support-measurement text{font-family:Arial,sans-serif;font-variant-numeric:tabular-nums}.support-rulers{user-select:none}.support-selection>.support-coordinate{display:block;margin-top:12px}
 .support-editor-inspector,.support-editor-toolbar{overscroll-behavior:contain}
 @media(pointer:coarse){
   .support-editor button,.support-editor select,.support-editor input:not([type=checkbox]),.support-editor summary{min-height:44px}

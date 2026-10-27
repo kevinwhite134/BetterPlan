@@ -14,7 +14,7 @@ const headerRow=8,firstRow=9
 function setup(wb:ExcelJS.Workbook,name:string,title:string,description:string,widths:number[],plan:Plan,s:Settings,date:string,previewImage?:number){
   const ws=wb.addWorksheet(name,{properties:{tabColor:{argb:name==='Quote'?C.green:'FFB5C344'}},views:[{showGridLines:false,state:'frozen',ySplit:headerRow,xSplit:name==='Quote'?0:1}],pageSetup:{paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:.3,right:.3,top:.4,bottom:.4,header:.15,footer:.15}}})
   widths.forEach((width,i)=>ws.getColumn(i+1).width=width)
-  ws.getCell('A2').value='BetterDeck';ws.getCell('A2').font={...font,bold:true,color:{argb:C.green}}
+  ws.getCell('A2').value={richText:[{text:'Better',font:{name:'Times New Roman',size:17,color:{argb:'FF70664B'}}},{text:'Deck',font:{name:'Times New Roman',size:17,italic:true,color:{argb:'FF69A910'}}},{text:'®',font:{name:'Times New Roman',size:10,vertAlign:'superscript',color:{argb:'FF70664B'}}}]};ws.getRow(2).height=25
   ws.getCell(2,widths.length).value=date;ws.getCell(2,widths.length).alignment={horizontal:'right'};ws.getCell(2,widths.length).font={...font,color:{argb:C.muted}}
   ws.getCell('A3').value=title;ws.getCell('A3').font={...font,size:16};ws.getRow(3).height=28
   const textColumns=previewImage===undefined?widths.length:name==='Quote'?3:6
@@ -22,7 +22,7 @@ function setup(wb:ExcelJS.Workbook,name:string,title:string,description:string,w
   ws.mergeCells(6,1,6,textColumns);ws.getCell('A6').value=`${plan.area.toFixed(2)} m² deck. ${s.board.colourName}. ${s.board.stock} m stock boards. Dimensions in mm; prices in EUR.`;ws.getCell('A6').font={...font,color:{argb:C.muted}};ws.getCell('A6').alignment={wrapText:true,vertical:'middle'};ws.getRow(6).height=previewImage===undefined?24:30
   if(previewImage!==undefined)ws.addImage(previewImage,{tl:{col:textColumns+.1,row:2},ext:{width:270,height:150}})
   ws.pageSetup.printTitlesRow='1:8'
-  ws.headerFooter.oddFooter='&LBetterDeck&CProvisional deck estimate&RPage &P of &N'
+  ws.headerFooter.oddFooter='&LBetterDeck®&CProvisional deck estimate&RPage &P of &N'
   return ws
 }
 

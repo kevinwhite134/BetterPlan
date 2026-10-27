@@ -2,7 +2,7 @@ import type { Plan } from './planner.ts'
 
 export function materialEstimate(plan:Plan,prices:Record<string,string>){
   const lines=plan.materials.map(material=>{
-    const pending=!plan.frame.geometryPass&&(material.key==='pedestals'||material.key.startsWith('profile'))
+    const pending=!plan.frame.geometryPass&&(material.key==='pedestals'||material.key.startsWith('profile')||material.key.endsWith('Joiners'))
     const raw=prices[material.key],value=typeof raw==='string'&&raw.trim()!==''?Number(raw):NaN
     const rate=Number.isFinite(value)&&value>=0?value:null
     const cents=pending||rate===null?null:Math.round((material.qty*rate+Number.EPSILON)*100)

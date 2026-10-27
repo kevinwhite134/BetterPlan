@@ -65,7 +65,7 @@ export default function FrameSettings({settings:s,onChange,plan,prices,products,
     <details id="support-advanced-settings" className="support-advanced" open={advanced} onToggle={e=>setAdvanced(e.currentTarget.open)}>
       <summary><span><strong>Advanced settings</strong><small>Stock, spacing, bearing &amp; clearance</small></span><span className="advanced-chevron" aria-hidden="true">⌄</span></summary>
       <section className="support-settings-group"><h3>Stock &amp; spacing</h3>
-        <Field label="Joist centres" unit="mm"><NumberInput value={s.joistSpacing} onChange={joistSpacing=>set({joistSpacing,confirmed:false})} min={100} max={400}/></Field>
+        <Field label="Joist centres" unit="mm"><NumberInput value={s.joistSpacing} onChange={joistSpacing=>set({joistSpacing,confirmed:false})} min={100} max={1500}/></Field>
         <Field label="Saw kerf" unit="mm"><NumberInput value={s.kerf} onChange={kerf=>set({kerf})} min={0} max={10}/></Field>
         <Field label="Alu-Joist stock length" unit="m"><NumberInput value={s.frameStock} onChange={frameStock=>set({frameStock,edgeDetailConfirmed:false})} min={.5} max={15} step={.01}/></Field>
       </section>

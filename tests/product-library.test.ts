@@ -39,7 +39,7 @@ test('saving, editing and duplicating products preserves their complete data ind
 })
 
 test('invalid product dimensions and price data cannot be saved or partially imported',()=>{
-  const invalid:unknown[]=[null,{}, {...board,name:' '},{...board,board:{...board.board,thickness:5}}, {...board,joistCentres:450},{...board,endBearing:0},
+  const invalid:unknown[]=[null,{}, {...board,name:' '},{...board,board:{...board.board,thickness:5}}, {...board,joistCentres:1501},{...board,endBearing:0},
     {...pedestal,min:0},{...pedestal,max:20},{...pedestal,diameter:20}, {...frame,height:50},{...frame,stock:0},{...frame,faceWidth:300},{...frame,maxOverhang:501},
     {...board,unitPrice:-1},{...pedestal,unitPrice:Infinity},{...frame,unitPrice:'20'},{...frame,notes:25}]
   for(const p of invalid){assert.ok(productError(p));assert.throws(()=>saveProduct([],p as LibraryProduct));assert.throws(()=>importProductLibrary({version:1,products:[board,p]}))}

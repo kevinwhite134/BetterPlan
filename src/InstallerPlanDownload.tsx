@@ -7,8 +7,9 @@ export default function InstallerPlanDownload({plan,settings}:{plan:Plan|null;se
     if(!plan?.frame.geometryPass)return
     setBusy(true);setError('')
     try{
-      const [{exportInstallerPdf},logo]=await Promise.all([import('./installerPdf'),fetch('/betterplan-mark.png').then(r=>r.ok?r.arrayBuffer():undefined).catch(()=>undefined)])
-      const bytes=await exportInstallerPdf(plan,settings,{logo:logo?new Uint8Array(logo):undefined})
+      const [{exportInstallerPdf},{loadBetterDeckLogo}]=await Promise.all([import('./installerPdf'),import('./pdfBrand')])
+      const logo=await loadBetterDeckLogo()
+      const bytes=await exportInstallerPdf(plan,settings,{logo})
       const url=URL.createObjectURL(new Blob([Uint8Array.from(bytes).buffer],{type:'application/pdf'})),a=document.createElement('a')
       a.href=url;a.download='betterdeck-installer-plan.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
     }catch{setError('Could not create the PDF. Please try again.')}finally{setBusy(false)}

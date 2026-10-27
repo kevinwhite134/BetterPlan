@@ -3,12 +3,13 @@ import type { PDFPage, PDFFont } from 'pdf-lib'
 import { dimensionText, installerDrawing, installerPlan, PLAN_COLOURS } from './installerPlan.ts'
 import type { InstallerDrawing } from './installerPlan.ts'
 import type { Plan, Settings } from './planner.ts'
+import { pdfBrand } from './pdfBrand.ts'
 
 const MM=72/25.4
 const colour=(hex:string)=>rgb(parseInt(hex.slice(1,3),16)/255,parseInt(hex.slice(3,5),16)/255,parseInt(hex.slice(5,7),16)/255)
 // Built-in PDF fonts use WinAnsi; keep user text printable instead of failing on
 // unsupported characters. Drawing coordinates and numerical precision are untouched.
-const printable=(s:string)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[–—]/g,'-').replace(/[·•]/g,' / ').replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/\s/g,' ').replace(/[^\x20-\x7e°²±×]/g,'?')
+const printable=(s:string)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[–—]/g,'-').replace(/[·•]/g,' / ').replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/\s/g,' ').replace(/[^\x20-\x7e°²±×®€]/g,'?')
 
 function text(page:PDFPage,font:PDFFont,value:string,x:number,y:number,size=3,ink=PLAN_COLOURS.ink){
   page.drawText(printable(value),{x:x*MM,y:page.getHeight()-y*MM,size:size*MM,font,color:colour(ink)})
@@ -37,14 +38,13 @@ export async function exportInstallerPdf(plan:Plan,s:Settings,options:{now?:Date
   if(!plan.frame.geometryPass)throw new Error('Resolve the support geometry before downloading an installer plan.')
   const model=installerPlan(plan,s),doc=await PDFDocument.create(),font=await doc.embedFont(StandardFonts.Helvetica),bold=await doc.embedFont(StandardFonts.HelveticaBold)
   const now=options.now??new Date(),date=new Intl.DateTimeFormat('en-IE',{dateStyle:'medium',timeZone:'Europe/Dublin'}).format(now)
-  const logo=options.logo?await doc.embedPng(options.logo):undefined
+  const brand=await pdfBrand(doc,options.logo)
   doc.setTitle(`BetterDeck installer plan ${model.reference}`);doc.setAuthor('BetterDeck');doc.setCreator('BetterPlan');doc.setCreationDate(now);doc.setModificationDate(now)
   const portrait=model.depth>model.width*1.2,W=portrait?297:420,H=portrait?420:297
   const header=(page:PDFPage,title:string)=>{
     const w=page.getWidth()/MM
-    if(logo)page.drawImage(logo,{x:12*MM,y:page.getHeight()-26*MM,width:17*MM,height:17*MM})
-    text(page,bold,'BetterDeck',logo?32:14,20,6,'#626c2c')
-    text(page,bold,title,14,32,4.2)
+    brand(page)
+    text(page,bold,title,63,27,w>300?4.2:3.5)
     const ref=model.reference+'  |  '+date
     text(page,font,ref,w-14-font.widthOfTextAtSize(ref,2.7*MM)/MM,16,2.7)
     rule(page,14,36,w-14,36,'#d8dfcb')
@@ -137,6 +137,6 @@ export async function exportInstallerPdf(plan:Plan,s:Settings,options:{now?:Date
     for(const line of lines){text(page,font,line,14,noteY,3);noteY+=4.5}noteY+=5
   }
   const pages=doc.getPages()
-  for(const [i,page]of pages.entries()){const w=page.getWidth()/MM,h=page.getHeight()/MM;text(page,font,`${model.reference} | BetterDeck | Site verification required`,14,h-5,2.2,PLAN_COLOURS.muted);text(page,font,`${i+1} / ${pages.length}`,w-29,h-5,2.2,PLAN_COLOURS.muted)}
+  for(const [i,page]of pages.entries()){const w=page.getWidth()/MM,h=page.getHeight()/MM;text(page,font,`${model.reference} | BetterDeck® | Site verification required`,14,h-5,2.2,PLAN_COLOURS.muted);text(page,font,`${i+1} / ${pages.length}`,w-29,h-5,2.2,PLAN_COLOURS.muted)}
   return doc.save()
 }

@@ -80,7 +80,7 @@ test('height range uses one consistent primary support elevation',()=>{
   assert.equal(planDeck(settings({height:100})).heightFits,false)
 })
 test('invalid numeric values and imported enums are rejected before calculation',()=>{
-  assert.throws(()=>planDeck(settings({joistSpacing:401})),/Joist centres/)
+  assert.throws(()=>planDeck(settings({joistSpacing:1501})),/Joist centres/)
   assert.throws(()=>planDeck(settings({board:{...DEFAULT_SETTINGS.board,stock:NaN}})),/Board length/)
   assert.throws(()=>planDeck(settings({load:4 as 3})),/Invalid direction/)
   assert.throws(()=>planDeck(settings({pedestalMin:500,pedestalMax:100})),/maximum/)

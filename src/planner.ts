@@ -11,6 +11,7 @@ import { boardLayoutKey } from './boardLayoutState.ts'
 import { supportLayoutIsCurrent } from './supportLayoutState.ts'
 import type { ProductSelections } from './productLibrary.ts'
 import { appliedProduct } from './productLibrary.ts'
+import { frameHardware } from './frameHardware.ts'
 // All geometry uses metres. Report limits are transcribed, not interpolated.
 export type Point = { x: number; y: number }
 export type Cutout = { id:string; name:string; polygon:Point[]; shape?:'rectangle'|'circle'|'oval'|'custom' }
@@ -436,7 +437,7 @@ export function validateSettings(s: Settings) {
   const checks: [number,number,number,string][]=[
     [s.board.stock,.3,15,'Board length must be between 0.3 and 15 m.'],[s.board.width,60,300,'Board width must be between 60 and 300 mm.'],
     [s.board.thickness,10,100,'Board thickness must be between 10 and 100 mm.'],[s.board.gap,1,15,'Side gap must be between 1 and 15 mm.'],
-    [s.board.endGap,1,20,'End gap must be between 1 and 20 mm.'],[s.joistSpacing,100,400,'Joist centres must be between 100 and 400 mm.'],
+    [s.board.endGap,1,20,'End gap must be between 1 and 20 mm.'],[s.joistSpacing,100,1500,'Joist centres must be between 100 and 1,500 mm.'],
     [s.height,30,2000,'Build-up height must be between 30 and 2,000 mm.'],[s.variation,0,1000,'Ground variation must be between 0 and 1,000 mm.'],
     [s.pedestalMin,1,2000,'Enter a valid pedestal minimum height.'],[s.pedestalMax,1,3000,'Enter a valid pedestal maximum height.'],
     [s.pedestalDiameter??150,50,600,'Pedestal base diameter must be between 50 and 600 mm.'],[s.pedestalClearance??0,0,300,'Pedestal edge clearance must be between 0 and 300 mm.'],[s.skirtingHeight??200,25,1000,'Fascia board height must be between 25 and 1,000 mm.'],
@@ -532,6 +533,7 @@ export function planDeck(s: Settings) {
   const warnings: string[]=[]
   if(!heightFits) warnings.push(heightCheck.reason)
   if(!s.confirmed) warnings.push('Confirm the selected board is approved for this Alu-Joist K Series frame and the chosen joist centres. The report covers BetterDeck-recommended composite decking only.')
+  if(s.joistSpacing>400)warnings.push('Entered joist centres exceed the report’s 400 mm decking limit. Confirm the board supplier’s span approval for this spacing.')
   if(s.frame==='small-small'&&s.load===5) warnings.push('Report 4B lists 800 mm support spacing at 5 kN/m² versus 700 mm at 3 kN/m². These exact values are retained; confirm with the supplier before construction.')
   warnings.push('Support positions are a geometric concept layout using the report span limits. Pedestal capacity, bearing, slope, bracing and connections require product/site verification. The span report does not approve end projections or the generated blocking/collector connections.')
   warnings.push(...frame.verification.notes)
@@ -548,10 +550,15 @@ export function planDeck(s: Settings) {
   if(s.skirting)warnings.push('Fascia edge loads, wind exposure, ventilation, fixings and bracing require supplier/site verification.')
   if(s.skirting&&skirtingGap<0)warnings.push('The selected full-height fascia board extends below the ground. Select a shorter product; the planner does not rip it down.')
   const clips=Math.ceil(boards.pieces.reduce((sum,p)=>sum+Math.ceil(p.length/(s.joistSpacing/1000))+1,0))
+  const hardware=frameHardware(frame,s.frameFaceWidth??35)
+  const hardwareNote=frame.geometryPass?'Derived from actual same-tier aluminium member ends.':'UNRESOLVED: connector quantities are pending support geometry.'
   const materials: Material[]=[
     {key:'boards',name:`${deckingBoardName(s.board.name)} · ${s.board.stock} m`,qty:boards.bars.length,unit:'boards',note:`Includes perimeter, infill and breaker pieces. ${used.toFixed(2)} linear m of cutting blanks.`},
     ...[35,80].filter(size=>size===frame.rule.joist||size===frame.rule.bearer).map(size=>{const product=appliedProduct(s,'frame');return {key:`profile${size}`,name:`${product?.kind==='frame'&&product.height===size?product.name:aluJoistName(size)} · ${s.frameStock} m`,qty:frameCuts[size].length,unit:'lengths',note:frame.geometryPass?`${(timber[size]||0).toFixed(2)} installed linear m; includes picture-frame and breaker supports.`:'UNRESOLVED: frame quantity and cost are unavailable until the support geometry passes.'}}),
     {key:'pedestals',name:s.pedestalName||'Adjustable pedestals',qty:frame.pedestals.length,unit:'units',note:frame.layoutStatus==='ready'?`Provisional locations; ${Math.round(range.min)}–${Math.round(range.max)} mm required adjustment.`:'UNRESOLVED: support quantity and frame costs are unavailable until a complete arrangement fits.'},
+    {key:'continuousJoiners',name:'Continuous joiner',qty:hardware.continuousJoiners,unit:'units',note:`One at each aluminium butt joint; 2 mm visual gap. ${hardwareNote}`},
+    {key:'joistJoiners',name:'Joist joiner',qty:hardware.joistJoiners,unit:'units',note:`Two per butt joint, one on each side, for joists and bearers. ${hardwareNote}`},
+    {key:'perpendicularJoiners',name:'Perpendicular joist joiner',qty:hardware.perpendicularJoiners,unit:'units',note:`One per same-tier perpendicular end connection, including ladder blocking; no physical gap. ${hardwareNote}`},
     ...(s.skirting?[{key:'skirting',name:`Fascia board · ${skirtingHeight} mm × ${s.board.stock} m`,qty:skirtBars.length,unit:'boards',note:`${perimeter.toFixed(2)} m perimeter; separate fascia product, no height ripping.`}]:[]),
     {key:'clips',name:'Decking fixing positions',qty:clips,unit:'positions',note:'Allowance only. Clip type, shared clips, starter clips and screws need a product fixing schedule.'},
   ]

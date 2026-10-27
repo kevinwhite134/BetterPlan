@@ -2,6 +2,7 @@ import { boardRings, ringPath } from './shapeGeometry.ts'
 import { bounds } from './planner.ts'
 import type { Plan, Point, Settings } from './planner.ts'
 import { signedArea } from './deckGeometry.ts'
+import { PEDESTAL_COLUMN_DIAMETER } from './frameHardware.ts'
 
 // A fixed-camera finished view of the actual plan, shared by the report header
 // and its Excel image. No controls or layer selection affect this snapshot.
@@ -21,7 +22,7 @@ export function deckPreviewSvg(plan:Plan,s:Settings):string{
   const fronts=plan.p.map((a,i)=>({a,b:plan.p[(i+1)%plan.p.length]})).filter(({a,b})=>{const u=physical(a),v=physical(b);return ((v.y-u.y)*Math.sin(angle)-(v.x-u.x)*Math.cos(angle))*sign>1e-7}).sort((u,v)=>project(u.a).y+project(u.b).y-project(v.a).y-project(v.b).y)
   const face=(a:Point,b:Point,top:number,bottom:number)=>[project(a,top),project(b,top),project(b,bottom),project(a,bottom)].map(q=>`${q.x},${q.y}`).join(' ')
   const parts=[polygon(coordinates(plan.p,ground-.015),'#344b37','none',0,'opacity=".08"')]
-  for(const p of plan.frame.pedestals){const a=project(p,head),b=project(p,ground),r=(s.pedestalDiameter??150)/2000;parts.push(`<ellipse cx="${b.x}" cy="${b.y}" rx="${r}" ry="${r*Math.cos(tilt)}" fill="#4d5c47"/>`,`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#4d5c47" stroke-width=".04"/>`)}
+  for(const p of plan.frame.pedestals){const a=project(p,head),b=project(p,ground),r=(s.pedestalDiameter??150)/2000;parts.push(`<ellipse cx="${b.x}" cy="${b.y}" rx="${r}" ry="${r*Math.cos(tilt)}" fill="#4d5c47"/>`,`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#4d5c47" stroke-width="${Math.min(PEDESTAL_COLUMN_DIAMETER,r*1.6)}"/>`)}
   for(const m of plan.frame.members)parts.push(line(m.a,m.b,m.kind==='bearer'?head+m.size/2000:boardBottom-plan.frame.rule.joist/2000,m.kind==='bearer'?'#8b969f':'#b8c0c6',m.kind==='bearer'?.055:.035))
   for(const {a,b} of fronts)parts.push(polygon(face(a,b,0,boardBottom),shade(.8)))
   parts.push(`<path d="${ringPath([plan.p,...plan.holes].map(r=>r.map(p=>project(p))))}" fill-rule="evenodd" fill="#67553f"/>`)

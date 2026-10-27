@@ -2,6 +2,7 @@ import { frameRule } from './planner.ts'
 import type { Settings } from './planner.ts'
 import { PEDESTAL_MODELS } from './productNames.ts'
 import { appliedProduct, PRODUCT_KINDS, productPriceKey } from './productLibrary.ts'
+import { HARDWARE_RATES } from './frameHardware.ts'
 
 export const PRICE_CHECKED='25 October 2026'
 export const PRICE_VERSION='2026-10-25'
@@ -34,6 +35,7 @@ export function defaultPricing(s:Settings){
   // Comparable capped composite boards/fascia, scaled by purchased stock area.
   // No gaps are included in the priced material area and thickness is not scaled.
   const rates:Record<string,string>={
+    ...HARDWARE_RATES,
     boards:money(48.74/(4.88*.140)*s.board.stock*s.board.width/1000),
     profile35:money(34.72/1.23/3*s.frameStock),
     profile80:money(34.72/1.23/3*1.2*s.frameStock),
@@ -42,6 +44,9 @@ export function defaultPricing(s:Settings){
     clips:money(15.04/25),
   }
   const basis:PriceBasis[]=[
+    {key:'continuousJoiners',name:'Continuous joiner',note:'User-supplied rate: EUR 1.68 each; one per aluminium butt joint.',source:''},
+    {key:'joistJoiners',name:'Joist joiner',note:'User-supplied rate: EUR 1.20 each; two per butt joint, including bearer joints.',source:''},
+    {key:'perpendicularJoiners',name:'Perpendicular joist joiner',note:'User-supplied rate: EUR 1.20 per perpendicular end connection.',source:''},
     {key:'boards',name:'Decking boards',note:'Comparable capped composite: €48.74 excluding VAT for 4.88 m × 140 mm. Scaled to the entered stock length and width.',source:'https://tjomahony.ie/trex-enhance-naturals-comp-deck-foggy-wharf-140x25mmx4-88m-square-edge-04fw010616e2s56.html'},
     {key:'profile35',name:'35 mm Alu-Joist',note:'Irish aluminium joist benchmark: €34.72 including VAT per 3 m. VAT removed at 23%; scaled by stock length. Benchmark profile is 30 mm high, not a quoted Alu-Joist K Series price.',source:'https://doublel.ie/products/aluminium-joist'},
     {key:'profile80',name:'80 mm Alu-Joist',note:'35 mm benchmark × 1.2, using the published £30 / £36 price relationship between comparable 40 mm / 80 mm profiles. No currency conversion is applied.',source:'https://www.cetadecking.co.uk/product-page/aluminium-joist-aj80'},

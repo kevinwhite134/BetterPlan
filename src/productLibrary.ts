@@ -24,7 +24,7 @@ export function productError(value:unknown):string{
   if(p.unitPrice!==undefined&&!numberIn(p.unitPrice,0,10000000))return 'Enter a valid price, or leave it blank.'
   if(p.kind==='board'){
     const error=boardProfileError(p.board);if(error)return error
-    if(!numberIn(p.joistCentres,100,400))return 'Maximum joist centres must be between 100 and 400 mm.'
+    if(!numberIn(p.joistCentres,100,1500))return 'Maximum joist centres must be between 100 and 1,500 mm.'
     if(!numberIn(p.endBearing,1,80))return 'Required board-end bearing must be between 1 and 80 mm.'
   }else if(p.kind==='pedestal'){
     if(!numberIn(p.min,1,2000))return 'Minimum adjustment must be between 1 and 2,000 mm.'

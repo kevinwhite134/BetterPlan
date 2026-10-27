@@ -80,7 +80,7 @@ function computeRecommendations(s:Settings,overrides:Record<string,string>):Fram
         let plan=geometry.get(product.diameter)
         if(!plan){plan=planDeck(candidate);geometry.set(product.diameter,plan)}
         if(!plan.frame.geometryPass||plan.frame.layoutStatus!=='ready'){if(plan.frame.issues[0])errors.push(plan.frame.issues[0]);continue}
-        const estimate=materialEstimate(plan,resolvedPricing(candidate,overrides)),supportLines=estimate.lines.filter(line=>line.key==='pedestals'||line.key.startsWith('profile'))
+        const estimate=materialEstimate(plan,resolvedPricing(candidate,overrides)),supportLines=estimate.lines.filter(line=>line.key==='pedestals'||line.key.startsWith('profile')||line.key.endsWith('Joiners'))
         const choice:FrameChoice={frame,settings:candidate,pedestals:plan.frame.pedestals.length,memberLength:plan.frame.members.reduce((sum,m)=>sum+Math.hypot(m.b.x-m.a.x,m.b.y-m.a.y),0),required:fit.required,usesCurrentPedestal:product===current,
           materialCostCents:estimate.complete?estimate.subtotalCents:null,frameCostCents:supportLines.every(line=>line.cents!==null)?supportLines.reduce((sum,line)=>sum+line.cents!,0):null,
           stockLengths:Object.values(plan.frameCuts).reduce((sum,bars)=>sum+bars.length,0),frameLayers:rule.bearer?2:1,profileTypes:[rule.joist,rule.bearer].filter((height,i,a)=>height>0&&a.indexOf(height)===i).length,
