@@ -38,18 +38,24 @@ export function sceneComponent(plan:Plan,s:Settings,id:string):SceneComponent|nu
 }
 
 export function pointInRing(q:Point,ring:Point[]){let inside=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const a=ring[i],b=ring[j];if((a.y>q.y)!==(b.y>q.y)&&q.x<(b.x-a.x)*(q.y-a.y)/(b.y-a.y)+a.x)inside=!inside}return inside}
-export function pickBoard(plan:Plan,s:Settings,q:Point,project:(p:Position3,tier:SceneTier)=>Point){
+export function pickBoard(plan:Plan,s:Settings,q:Point,project:(p:Position3,tier:SceneTier,component?:string)=>Point){
   const physical=(p:Point):Position3=>({...(s.direction==='vertical'?{x:p.y,y:p.x}:p),z:0})
-  for(let i=plan.boards.pieces.length-1;i>=0;i--){const rings=boardRings(plan.boards.pieces[i]).map(r=>r.map(p=>project(physical(p),'board')));if(pointInRing(q,rings[0])&&!rings.slice(1).some(r=>pointInRing(q,r)))return `board-${i}`}
+  for(let i=plan.boards.pieces.length-1;i>=0;i--){const rings=boardRings(plan.boards.pieces[i]).map(r=>r.map(p=>project(physical(p),'board',`board-${i}`)));if(pointInRing(q,rings[0])&&!rings.slice(1).some(r=>pointInRing(q,r)))return `board-${i}`}
   return null
 }
-export function pickStructure(plan:Plan,s:Settings,q:Point,exposure:StructureExposure,showSupports:boolean,project:(p:Position3,tier:SceneTier)=>Point,tolerance:number){
+export function pickStructure(plan:Plan,s:Settings,q:Point,exposure:StructureExposure,showSupports:boolean,project:(p:Position3,tier:SceneTier,component?:string)=>Point,tolerance:number){
   // This path also identifies parts in the batched large-project renderer.
   let best:string|null=null,nearest=tolerance
   const lineDistance=(a:Point,b:Point)=>{const dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,((q.x-a.x)*dx+(q.y-a.y)*dy)/l)):0;return Math.hypot(q.x-a.x-t*dx,q.y-a.y-t*dy)}
   const physical=(p:Point,z:number):Position3=>({...(s.direction==='vertical'?{x:p.y,y:p.x}:p),z})
-  if(showSupports||exposure==='pedestals')plan.frame.pedestals.forEach((p,i)=>{const h=pedestalHeight(p,s,plan.frame.rule),head=-(s.board.thickness+plan.frame.rule.joist+plan.frame.rule.bearer)/1000,d=lineDistance(project(physical(p,h.ground),'pedestal'),project(physical(p,head),'pedestal'));if(d<nearest){nearest=d;best=`pedestal-${i}`}})
-  if(exposure!=='pedestals')plan.frame.members.forEach((m,i)=>{if(exposure==='bearers'&&m.kind!=='bearer')return;const tier=m.kind==='bearer'?'bearer':'joist',z=-s.board.thickness/1000-(m.kind==='bearer'?plan.frame.rule.joist/1000:0)-m.size/2000,d=lineDistance(project(physical(m.a,z),tier),project(physical(m.b,z),tier));if(d<nearest){nearest=d;best=`member-${i}`}})
-  if(exposure!=='pedestals')for(const p of hardwareGeometry(plan,s,exposure)){const point=project(p.centre,p.kind==='bearer'?'bearer':'joist'),d=Math.hypot(q.x-point.x,q.y-point.y);if(d<nearest*.7){nearest=d;best=p.id}}
+  if(showSupports||exposure==='pedestals')plan.frame.pedestals.forEach((p,i)=>{
+    const h=pedestalHeight(p,s,plan.frame.rule),head=-(s.board.thickness+plan.frame.rule.joist+plan.frame.rule.bearer)/1000
+    const base=project(physical(p,h.ground),'pedestal',`pedestal-${i}:base`),cap=project(physical(p,head),'pedestal',`pedestal-${i}:head`)
+    const d=Math.min(Math.hypot(q.x-base.x,q.y-base.y),Math.hypot(q.x-cap.x,q.y-cap.y),lineDistance(project(physical(p,h.ground),'pedestal',`pedestal-${i}:stem`),project(physical(p,head),'pedestal',`pedestal-${i}:stem`)))
+    if(d<nearest){nearest=d;best=`pedestal-${i}`}
+  })
+
+  if(exposure!=='pedestals')plan.frame.members.forEach((m,i)=>{if(exposure==='bearers'&&m.kind!=='bearer')return;const tier=m.kind==='bearer'?'bearer':'joist',z=-s.board.thickness/1000-(m.kind==='bearer'?plan.frame.rule.joist/1000:0)-m.size/2000,d=lineDistance(project(physical(m.a,z),tier,`member-${i}`),project(physical(m.b,z),tier,`member-${i}`));if(d<nearest){nearest=d;best=`member-${i}`}})
+  if(exposure!=='pedestals')for(const p of hardwareGeometry(plan,s,exposure)){const point=project(p.centre,p.kind==='bearer'?'bearer':'joist',p.id),d=Math.hypot(q.x-point.x,q.y-point.y);if(d<nearest*.7){nearest=d;best=p.id}}
   return best
 }

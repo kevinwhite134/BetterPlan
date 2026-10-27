@@ -48,41 +48,42 @@ export function projectedStructure(parts:StructurePart[],rotation:number,tilt:nu
 
 export type StructurePath={kind:'pedestal'|'bearer'|'joist';fill:string;path:string}
 const overviewCircle=Array.from({length:8},(_,i)=>({x:Math.cos(i*Math.PI/4),y:Math.sin(i*Math.PI/4)}))
+const smoothCircle=Array.from({length:16},(_,i)=>({x:Math.cos(i*Math.PI/8),y:Math.sin(i*Math.PI/8)}))
 // Large-project rendering batches all actual components into a few SVG paths.
-// Pedestal silhouettes use eight-sided bases/heads at their exact positions,
+// Pedestal silhouettes use 8- or 16-sided bases/heads at their exact positions,
 // diameters and heights. The full geometry model and quantities are untouched.
-export function structurePaths(plan:Plan,s:Settings,exposure:StructureExposure,showSupports:boolean,rotation:number,tilt:number,project:(p:Position3,kind?:StructurePath['kind'])=>Point){
+export function structurePaths(plan:Plan,s:Settings,exposure:StructureExposure,showSupports:boolean,rotation:number,tilt:number,project:(p:Position3,kind?:StructurePath['kind'],component?:string)=>Point,circleSegments:8|16=8){
   const paths=new Map<string,{kind:StructurePath['kind'];fill:string;segments:string[]}>()
   const angle=rotation*Math.PI/180,t=tilt*Math.PI/180,view={x:Math.sin(angle)*Math.sin(t),y:Math.cos(angle)*Math.sin(t),z:Math.cos(t)}
   const physical=(p:Point)=>s.direction==='vertical'?{x:p.y,y:p.x}:p
   const boardBottom=-s.board.thickness/1000,head=boardBottom-(plan.frame.rule.joist+plan.frame.rule.bearer)/1000,hardware=frameHardware(plan.frame,s.frameFaceWidth??35)
-  const polygon=(points:Position3[],fill:string,kind:StructurePath['kind'])=>{
-    const segment=points.map((p,i)=>{const q=project(p,kind);return `${i?'L':'M'}${Math.round(q.x*10000)/10000} ${Math.round(q.y*10000)/10000}`}).join('')+'Z',key=kind+fill
+  const polygon=(points:Position3[],fill:string,kind:StructurePath['kind'],component:string)=>{
+    const segment=points.map((p,i)=>{const q=project(p,kind,component);return `${i?'L':'M'}${Math.round(q.x*10000)/10000} ${Math.round(q.y*10000)/10000}`}).join('')+'Z',key=kind+fill
     let batch=paths.get(key);if(!batch){batch={kind,fill,segments:[]};paths.set(key,batch)}batch.segments.push(segment)
   }
   let pedestals=0,members=0
   const readings=surveyReadings(s)
-  if(showSupports||exposure==='pedestals')for(const point of plan.frame.pedestals){
+  if(showSupports||exposure==='pedestals')for(const [pedestalIndex,point] of plan.frame.pedestals.entries()){
     pedestals++
     const ground=pedestalHeight(point,s,plan.frame.rule,readings).ground,p=physical(point),radius=(s.pedestalDiameter??150)/2000,adjustment=Math.max(0,head-ground),plate=Math.min(.008,adjustment/4),stem=Math.min(PEDESTAL_COLUMN_DIAMETER/2,radius*.8)
-    const circle=(r:number,z:number)=>overviewCircle.map(unit=>({x:p.x+r*unit.x,y:p.y+r*unit.y,z}))
-    polygon(circle(radius,ground+plate),'#566254','pedestal')
+    const circle=(r:number,z:number)=>(circleSegments===16?smoothCircle:overviewCircle).map(unit=>({x:p.x+r*unit.x,y:p.y+r*unit.y,z}))
+    polygon(circle(radius,ground+plate),'#566254','pedestal',`pedestal-${pedestalIndex}:base`)
     const nx=Math.cos(angle)*stem,ny=-Math.sin(angle)*stem
-    polygon([{x:p.x-nx,y:p.y-ny,z:ground+plate},{x:p.x+nx,y:p.y+ny,z:ground+plate},{x:p.x+nx,y:p.y+ny,z:head-plate},{x:p.x-nx,y:p.y-ny,z:head-plate}],'#3d4c3e','pedestal')
-    polygon(circle(radius*.8,head),'#64735d','pedestal')
+    polygon([{x:p.x-nx,y:p.y-ny,z:ground+plate},{x:p.x+nx,y:p.y+ny,z:ground+plate},{x:p.x+nx,y:p.y+ny,z:head-plate},{x:p.x-nx,y:p.y-ny,z:head-plate}],'#3d4c3e','pedestal',`pedestal-${pedestalIndex}:stem`)
+    polygon(circle(radius*.8,head),'#64735d','pedestal',`pedestal-${pedestalIndex}:head`)
   }
-  if(exposure!=='pedestals')for(const [i,original] of plan.frame.members.entries()){
-    const member=renderedMember(original,hardware.trims[i])
+  if(exposure!=='pedestals')for(const [memberIndex,original] of plan.frame.members.entries()){
+    const member=renderedMember(original,hardware.trims[memberIndex])
     if(exposure==='bearers'&&member.kind!=='bearer')continue
     const a=physical(member.a),b=physical(member.b),length=Math.hypot(b.x-a.x,b.y-a.y);if(length<1e-9)continue
     members++
     const half=(s.frameFaceWidth??35)/2000,nx=-(b.y-a.y)/length*half,ny=(b.x-a.x)/length*half
     const top=boardBottom-(member.kind==='bearer'?plan.frame.rule.joist/1000:0),bottom=top-member.size/1000,kind=member.kind==='bearer'?'bearer':'joist',colour=colours[member.kind]
     const ring=[{x:a.x+nx,y:a.y+ny},{x:a.x-nx,y:a.y-ny},{x:b.x-nx,y:b.y-ny},{x:b.x+nx,y:b.y+ny}]
-    polygon(ring.map(p=>({...p,z:top})),colour[0],kind)
+    polygon(ring.map(p=>({...p,z:top})),colour[0],kind,`member-${memberIndex}`)
     for(let i=0;i<ring.length;i++){
       const u=ring[i],v=ring[(i+1)%ring.length],length=Math.hypot(v.x-u.x,v.y-u.y),normal={x:(v.y-u.y)/length,y:-(v.x-u.x)/length}
-      if(normal.x*view.x+normal.y*view.y>1e-8)polygon([{...u,z:bottom},{...v,z:bottom},{...v,z:top},{...u,z:top}],colour[1],kind)
+      if(normal.x*view.x+normal.y*view.y>1e-8)polygon([{...u,z:bottom},{...v,z:bottom},{...v,z:top},{...u,z:top}],colour[1],kind,`member-${memberIndex}`)
     }
   }
   const tier={pedestal:0,bearer:1,joist:2}

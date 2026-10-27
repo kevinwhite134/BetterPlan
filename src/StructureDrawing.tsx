@@ -1,26 +1,18 @@
 import { memo, useMemo } from 'react'
-import { projectedStructure, structureGeometry, structurePaths } from './structureGeometry'
-import { isLargePreview } from './renderOverview'
+import { projectedStructure, structurePaths } from './structureGeometry'
 import { hardwareGeometry } from './hardwareGeometry'
 import type { Position3, StructureExposure } from './structureGeometry'
 import type { Plan, Settings, Point } from './planner'
 
-const DetailedStructure=memo(function DetailedStructure({plan,settings,exposure,showSupports,rotation,tilt,project}:{plan:Plan;settings:Settings;exposure:StructureExposure;showSupports:boolean;rotation:number;tilt:number;project:(p:Position3,kind?:'pedestal'|'bearer'|'joist')=>Point}){
-  const parts=useMemo(()=>structureGeometry(plan,settings,exposure,showSupports),[plan,settings,exposure,showSupports])
-  const visible=useMemo(()=>projectedStructure(parts,rotation,tilt),[parts,rotation,tilt])
-  return <g className="structure-drawing">{visible.map(part=><g key={part.id} data-component={part.id} data-kind={part.kind}><title>{part.label}</title>{part.faces.map((face,i)=><polygon key={i} points={face.points.map(p=>{const q=project(p,part.kind);return `${q.x},${q.y}`}).join(' ')} fill={face.fill} stroke={part.kind==='pedestal'?'#303c32':'#5e6971'} strokeWidth=".0015" strokeLinejoin="round"/>)}</g>)}</g>
-})
-const BatchedStructure=memo(function BatchedStructure({plan,settings,exposure,showSupports,rotation,tilt,project}:{plan:Plan;settings:Settings;exposure:StructureExposure;showSupports:boolean;rotation:number;tilt:number;project:(p:Position3,kind?:'pedestal'|'bearer'|'joist')=>Point}){
-  const drawing=useMemo(()=>structurePaths(plan,settings,exposure,showSupports,rotation,tilt,project),[plan,settings,exposure,showSupports,rotation,tilt,project])
+const BatchedStructure=memo(function BatchedStructure({plan,settings,exposure,showSupports,rotation,tilt,project}:{plan:Plan;settings:Settings;exposure:StructureExposure;showSupports:boolean;rotation:number;tilt:number;project:(p:Position3,kind?:'pedestal'|'bearer'|'joist',component?:string)=>Point}){
+  const drawing=useMemo(()=>structurePaths(plan,settings,exposure,showSupports,rotation,tilt,project,plan.frame.pedestals.length<200?16:8),[plan,settings,exposure,showSupports,rotation,tilt,project])
   return <g className="structure-drawing overview-structure" data-pedestal-count={drawing.components.pedestals} data-member-count={drawing.components.members}>{drawing.paths.map((p,i)=><path key={i} d={p.path} fill={p.fill} data-kind={p.kind}/>)}</g>
 })
-const StructureDrawing=memo(function StructureDrawing(props:Parameters<typeof DetailedStructure>[0]){
+const StructureDrawing=memo(function StructureDrawing(props:Parameters<typeof BatchedStructure>[0]){
   const hardware=useMemo(()=>hardwareGeometry(props.plan,props.settings,props.exposure),[props.plan,props.settings,props.exposure])
   const visible=useMemo(()=>projectedStructure(hardware,props.rotation,props.tilt),[hardware,props.rotation,props.tilt])
-  const large=isLargePreview(props.plan)
   const paths=new Map<string,string[]>()
-  if(large)for(const part of visible)for(const face of part.faces){const segments=paths.get(face.fill)??[];segments.push(face.points.map((p,i)=>{const q=props.project(p,part.kind);return `${i?'L':'M'}${q.x} ${q.y}`}).join('')+'Z');paths.set(face.fill,segments)}
-  return <>{large?<BatchedStructure {...props}/>:<DetailedStructure {...props}/>}<g className="hardware-drawing" data-connector-count={hardware.length}>{large?[...paths].map(([fill,segments])=><path key={fill} d={segments.join('')} fill={fill}/>):visible.map(part=><g key={part.id} data-component={part.id}><title>{part.label}</title>{part.faces.map((face,i)=><path key={i} d={face.points.map((p,j)=>{const q=props.project(p,part.kind);return `${j?'L':'M'}${q.x} ${q.y}`}).join('')+'Z'} fill={face.fill}/>)}</g>)}</g></>
-
+  for(const part of visible)for(const face of part.faces){const segments=paths.get(face.fill)??[];segments.push(face.points.map((p,i)=>{const q=props.project(p,part.kind,part.id);return `${i?'L':'M'}${Math.round(q.x*10000)/10000} ${Math.round(q.y*10000)/10000}`}).join('')+'Z');paths.set(face.fill,segments)}
+  return <><BatchedStructure {...props}/><g className="hardware-drawing" data-connector-count={hardware.length}>{[...paths].map(([fill,segments])=><path key={fill} d={segments.join('')} fill={fill}/>)}</g></>
 })
 export default StructureDrawing
