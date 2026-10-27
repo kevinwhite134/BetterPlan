@@ -1,0 +1,130 @@
+{
+  "polygon": [
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 2.8,
+      "y": 0
+    },
+    {
+      "x": 2.8,
+      "y": 3.6
+    },
+    {
+      "x": 3.85,
+      "y": 4.65
+    },
+    {
+      "x": 5.8,
+      "y": 4.65
+    },
+    {
+      "x": 7.5,
+      "y": 3.4
+    },
+    {
+      "x": 7.5,
+      "y": 9.2
+    },
+    {
+      "x": 1.7,
+      "y": 9.2
+    },
+    {
+      "x": 0,
+      "y": 7.5
+    }
+  ],
+  "direction": "horizontal",
+  "joints": "breaker",
+  "board": {
+    "id": "custom",
+    "name": "Example composite board",
+    "width": 136,
+    "thickness": 24,
+    "stock": 3.66,
+    "colour": "#b07240",
+    "colourName": "Warm oak",
+    "gap": 10,
+    "endGap": 4
+  },
+  "frame": "big-small",
+  "load": 3,
+  "height": 261,
+  "variation": 0,
+  "pedestalMin": 117,
+  "pedestalMax": 201,
+  "pedestalName": "VersiJack F4 Pedestal",
+  "joistSpacing": 400,
+  "kerf": 4,
+  "frameStock": 3,
+  "confirmed": false,
+  "breakerMode": "manual",
+  "breakerPositions": [
+    3.69
+  ],
+  "skirting": true,
+  "skirtingHeight": 180,
+  "edgeDetailConfirmed": false,
+  "perimeterJoints": true,
+  "cutouts": [
+    {
+      "id": "74b63761-bca2-45dd-a10b-7c1fe74eaf51",
+      "name": "Opening 1",
+      "shape": "custom",
+      "polygon": [
+        {
+          "x": 0.7,
+          "y": 1.8
+        },
+        {
+          "x": 1.9,
+          "y": 1.8
+        },
+        {
+          "x": 1.9,
+          "y": 7.1
+        },
+        {
+          "x": 6.4,
+          "y": 7.2
+        },
+        {
+          "x": 6.4,
+          "y": 8.6
+        },
+        {
+          "x": 2.5,
+          "y": 8.6
+        },
+        {
+          "x": 0.6,
+          "y": 7
+        }
+      ]
+    }
+  ],
+  "frameSelection": "manual",
+  "pedestalSelection": "auto",
+  "pedestalDiameter": 205,
+  "selectionObjective": "spread",
+  "breakerWidth": "double",
+  "breakerCount": 1,
+  "allowRipping": true,
+  "perimeterEdges": [
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true
+  ],
+  "boardEndBearing": 1,
+  "pedestalClearance": 120,
+  "frameFaceWidth": 35
+}
