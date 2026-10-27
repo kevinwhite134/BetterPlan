@@ -30,9 +30,6 @@ export function explodedLayout(plan:Plan,s:Settings,percentage:number){
   plan.frame.pedestals.forEach((point,i)=>{
     const p=physical(point),ground=pedestalHeight(point,s,plan.frame.rule,readings).ground,r=(s.pedestalDiameter??150)/2000
     add(`pedestal-${i}`,{...p,z:(head+ground)/2},'pedestal',{x:r,y:r,z:(head-ground)/2},{x:0,y:0,z:step*.24})
-    add(`pedestal-${i}:base`,{...p,z:ground},'pedestal',{x:r,y:r,z:.008})
-    add(`pedestal-${i}:stem`,{...p,z:(head+ground)/2},'pedestal',{x:.055,y:.055,z:(head-ground)/2},{x:0,y:0,z:step*.24})
-    add(`pedestal-${i}:head`,{...p,z:head},'pedestal',{x:r*.8,y:r*.8,z:.008},{x:0,y:0,z:step*.5})
   })
   for(const c of frameHardware(plan.frame,s.frameFaceWidth??35).connections){
     const p=physical(c.point),u=physical(c.axis),n={x:-u.y,y:u.x},z=boardBottom-(c.tier==='bearer'?plan.frame.rule.joist/1000:0)-c.size/2000
@@ -48,6 +45,7 @@ export function explodedLayout(plan:Plan,s:Settings,percentage:number){
 export type ExplosionLayout=ReturnType<typeof explodedLayout>
 export function displacePart(p:Position3,layout:ExplosionLayout,component?:string,tier:SceneTier='board'):Position3{
   if(!layout.amount)return p
-  const offset=component?layout.offsets.get(component):undefined
+  // Rendered sub-parts share the complete product's translation.
+  const offset=component?layout.offsets.get(component)??layout.offsets.get(component.split(':')[0]):undefined
   return offset?{x:p.x+offset.x,y:p.y+offset.y,z:p.z+offset.z}:{...p,z:p.z+layout.levels[tier]}
 }

@@ -1,5 +1,17 @@
 import type { Point } from './planner.ts'
 export type LabelView={x:number;y:number;w:number;h:number}
+export function placeLabelBoxes(anchors:Point[],view:LabelView,sizes:{w:number;h:number}[],gap:number){
+  const placed:{x:number;y:number;w:number;h:number}[]=[]
+  return anchors.map((anchor,i)=>{
+    const {w,h}=sizes[i],clamp=(n:number,min:number,max:number)=>Math.max(min,Math.min(max,n))
+    const candidates:Point[]=[{x:clamp(anchor.x-w/2,view.x,view.x+view.w-w),y:clamp(anchor.y-h/2,view.y,view.y+view.h-h)}]
+    for(let y=view.y;y<=view.y+view.h-h;y+=gap*2)for(let x=view.x;x<=view.x+view.w-w;x+=gap*2)candidates.push({x,y})
+    candidates.sort((a,b)=>Math.hypot(a.x+w/2-anchor.x,a.y+h/2-anchor.y)-Math.hypot(b.x+w/2-anchor.x,b.y+h/2-anchor.y))
+    const point=candidates.find(p=>placed.every(q=>p.x+w+gap<=q.x||q.x+q.w+gap<=p.x||p.y+h+gap<=q.y||q.y+q.h+gap<=p.y))
+    if(!point)return null
+    const box={...point,w,h};placed.push(box);return box
+  })
+}
 // Text lives in a separate key. Only compact numbered markers enter the scene;
 // their circles are packed without overlap, so no crossing leader lines exist.
 export function placeLabelMarkers(anchors:Point[],view:LabelView,radius:number){
