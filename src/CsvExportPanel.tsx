@@ -1,3 +1,4 @@
+import { customerPlanSvg } from './customerPlan'
 import { ChoiceField, Field } from './SettingControls'
 import { useMemo, useState } from 'react'
 import Brand from './Brand'
@@ -9,7 +10,7 @@ import { deckPreviewPng, deckPreviewSvg, deckPreviewUrl } from './deckPreview'
 
 export default function CsvExport({plan,settings,prices,onDownload}:{plan:Plan;settings:Settings;prices:Record<string,string>;onDownload:(filename:string,content:string|ArrayBuffer,type?:string)=>void}){
   const [kind,setKind]=useState<CsvKind>('materials'),[delimiter,setDelimiter]=useState<','|';'>(',')
-  const [busy,setBusy]=useState(false),[error,setError]=useState('')
+  const [includeInstaller,setIncludeInstaller]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('')
   const report=useMemo(()=>buildCsvReport(kind,plan,settings,prices),[kind,plan,settings,prices])
   const deckSvg=useMemo(()=>deckPreviewSvg(plan,settings),[plan,settings])
   const selected=CSV_REPORTS.find(q=>q.id===kind)!
@@ -19,14 +20,17 @@ export default function CsvExport({plan,settings,prices,onDownload}:{plan:Plan;s
   const currency=new Intl.NumberFormat('en-IE',{style:'currency',currency:'EUR'}),rateCurrency=new Intl.NumberFormat('en-IE',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:4}),number=new Intl.NumberFormat('en-IE',{maximumFractionDigits:2})
   const excel=async()=>{setBusy(true);setError('');try{const [{exportDeckWorkbook},preview]=await Promise.all([import('./workbookExport'),deckPreviewPng(deckSvg)]);const data=await exportDeckWorkbook(plan,settings,prices,preview);onDownload('betterplan-deck-pack.xlsx',data,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')}catch{setError('The Excel workbook could not be created. Try again, or download the CSV.')}finally{setBusy(false)}}
   const quotation=async()=>{setBusy(true);setError('');try{const [{exportQuotationPdf},{loadBetterDeckLogo},preview]=await Promise.all([import('./quotationPdf'),import('./pdfBrand'),deckPreviewPng(deckSvg)]);const logo=await loadBetterDeckLogo(),image=new Uint8Array(await (await fetch(preview)).arrayBuffer()),data=await exportQuotationPdf(plan,settings,prices,{logo,preview:image});onDownload('betterdeck-quotation.pdf',Uint8Array.from(data).buffer,'application/pdf')}catch{setError('The quotation PDF could not be created. Please try again.')}finally{setBusy(false)}}
+  const customerPack=async()=>{setBusy(true);setError('');try{const [{exportCustomerQuotePack},{loadBetterDeckLogo},render,layout]=await Promise.all([import('./customerQuotePack'),import('./pdfBrand'),deckPreviewPng(deckSvg),deckPreviewPng(customerPlanSvg(plan,settings),1440,1000)]);const [logo,preview,planPreview]=await Promise.all([loadBetterDeckLogo(),fetch(render).then(r=>r.arrayBuffer()).then(b=>new Uint8Array(b)),fetch(layout).then(r=>r.arrayBuffer()).then(b=>new Uint8Array(b))]);const bytes=await exportCustomerQuotePack(plan,settings,prices,{logo,preview,planPreview,includeInstaller:includeInstaller&&plan.frame.geometryPass});onDownload('betterdeck-customer-quotation.pdf',Uint8Array.from(bytes).buffer,'application/pdf')}catch{setError('The customer quotation pack could not be created. Please try again.')}finally{setBusy(false)}}
   return <section className="csv-export" aria-labelledby="csv-export-title">
     <div className="csv-export-heading"><div><h3 id="csv-export-title">Reports</h3></div><span className="export-file-tag">PDF + XLSX + CSV</span></div>
     <div className="csv-export-controls">
       <Field label="Report preview"><select value={kind} onChange={e=>setKind(e.target.value as CsvKind)}>{CSV_REPORTS.map(q=><option key={q.id} value={q.id}>{q.label}</option>)}</select></Field>
-      <button className="button primary" aria-busy={busy} disabled={busy} onClick={excel}>{busy?'Creating workbook…':'↓ Excel pack'}</button>
+      <button className="button primary" disabled={busy} onClick={customerPack}>↓ Customer PDF pack</button>
+      <button className="button secondary" aria-busy={busy} disabled={busy} onClick={excel}>{busy?'Creating files…':'↓ Excel pack'}</button>
       <button className="button secondary" disabled={busy} onClick={quotation}>↓ Quotation PDF</button>
       <button className="button secondary" disabled={!!report.unavailable||!report.rows.length} onClick={()=>onDownload(`betterplan-${kind}.csv`,serializeCsv(report,delimiter))}>↓ CSV report</button>
     </div>
+    <label className="pack-installer-option"><input type="checkbox" checked={includeInstaller} disabled={!plan.frame.geometryPass} onChange={e=>setIncludeInstaller(e.target.checked)}/>Include installer setting-out schedules in the customer pack</label>
     {error?<p className="csv-unavailable" role="alert">{error}</p>:null}
     
     {report.unavailable?<p className="csv-unavailable" role="status">{report.unavailable}</p>:<details className="csv-preview" open><summary>Document preview <span>{pricing?previewRows.length:report.rows.length} {pricing?'items':'rows'}</span></summary><div className="export-paper">

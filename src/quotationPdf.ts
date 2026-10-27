@@ -9,7 +9,7 @@ const MM=72/25.4,green=rgb(.38,.42,.17),ink=rgb(.19,.23,.16),muted=rgb(.43,.47,.
 const printable=(s:string)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[–—]/g,'-').replace(/[‘’]/g,"'").replace(/[^\x20-\x7e€®²×°±·]/g,' ')
 export async function exportQuotationPdf(plan:Plan,s:Settings,prices:Record<string,string>,options:{now?:Date;logo?:Uint8Array;preview?:Uint8Array}={}){
   const doc=await PDFDocument.create(),font=await doc.embedFont(StandardFonts.Helvetica),bold=await doc.embedFont(StandardFonts.HelveticaBold),brand=await pdfBrand(doc,options.logo)
-  const preview=options.preview?await doc.embedPng(options.preview):undefined,now=options.now??new Date(),estimate=materialEstimate(plan,prices),reference=installerPlan(plan,s).reference
+  const preview=options.preview?await doc.embedPng(options.preview):undefined,now=options.now??new Date(),estimate=materialEstimate(plan,prices),reference=s.quotation?.projectReference?.trim()||installerPlan(plan,s).reference
   const date=new Intl.DateTimeFormat('en-IE',{dateStyle:'medium',timeZone:'Europe/Dublin'}).format(now),money=(n:number)=>`€${n.toFixed(2)}`
   doc.setTitle(`BetterDeck® materials quotation ${reference}`);doc.setAuthor('BetterDeck');doc.setCreator('BetterPlan');doc.setCreationDate(now);doc.setModificationDate(now)
   const text=(page:PDFPage,value:string,x:number,y:number,size=3,strong=false,color=ink)=>page.drawText(printable(value),{x:x*MM,y:page.getHeight()-y*MM,size:size*MM,font:strong?bold:font,color})

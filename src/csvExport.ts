@@ -1,3 +1,4 @@
+import { pedestalHeights } from './pedestalSurvey.ts'
 import { bounds, FRAME_NAMES, pieceOutline } from './planner.ts'
 import type { Plan, Point, Settings } from './planner.ts'
 import { materialEstimate } from './materialEstimate.ts'
@@ -98,9 +99,10 @@ export function buildCsvReport(kind:CsvKind,plan:Plan,s:Settings,prices:Record<s
     return {headers,rows}
   }
   if(kind==='pedestals'){
-    const headers=['Pedestal ID','Deck X mm','Deck Y mm','Base diameter mm','Extra edge clearance mm','Required minimum height mm','Required maximum height mm','Product minimum height mm','Product maximum height mm','Product','Shared junction','Status']
+    const survey=pedestalHeights(plan.frame.pedestals,s,plan.frame.rule)
+    const headers=['Pedestal ID','Deck X mm','Deck Y mm','Base diameter mm','Extra edge clearance mm','Required minimum height mm','Required maximum height mm','Product minimum height mm','Product maximum height mm','Product','Shared junction','Status','Surveyed ground level mm']
     if(!plan.frame.geometryPass)return {headers,rows:[],unavailable:'Resolve support geometry before exporting pedestal positions.'}
-    return {headers,rows:plan.frame.pedestals.map((p,i)=>{const q=physical(p,s);return [pedestalReference(s.pedestalName,i),mm(q.x),mm(q.y),s.pedestalDiameter??150,s.pedestalClearance??0,round(plan.range.min),round(plan.range.max),s.pedestalMin,s.pedestalMax,s.pedestalName,plan.frame.junctions.some(j=>Math.hypot(j.x-p.x,j.y-p.y)<1e-6)?'Yes':'No',plan.heightFits?'Provisional; product/site checks required':'REVIEW: product height range does not fit']})}
+    return {headers,rows:plan.frame.pedestals.map((p,i)=>{const q=physical(p,s);return [pedestalReference(s.pedestalName,i),mm(q.x),mm(q.y),s.pedestalDiameter??150,s.pedestalClearance??0,round(survey.rows[i].min),round(survey.rows[i].max),s.pedestalMin,s.pedestalMax,s.pedestalName,plan.frame.junctions.some(j=>Math.hypot(j.x-p.x,j.y-p.y)<1e-6)?'Yes':'No',survey.rows[i].fits?'Provisional; product/site checks required':'REVIEW: product height range does not fit',survey.rows[i].level]})}
   }
   const box=bounds(plan.physical),rows:CsvCell[][]=[]
   const detail=(category:string,label:string,value:CsvCell,unit='',status='',notes='')=>rows.push([category,label,value,unit,status,notes])

@@ -1,7 +1,9 @@
+import DeckScene from './DeckScene'
+import { LayerThumbnail } from './DeckLayerThumbnail'
 import OpenIcon from './OpenIcon'
 import PlanRotation from './PlanRotationControls'
 import { rotatedViewBox, rotatePlanSvg } from './planRotation'
-import { memo, useCallback, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useId, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent, PointerEvent } from 'react'
 import { bounds } from './planner'
 import { boardRings, ringPath } from './shapeGeometry'
@@ -10,7 +12,7 @@ import StructureDrawing from './StructureDrawing'
 import DeckLabels from './DeckLabels'
 import { BOARD_USE_NAMES, frameMemberName, pedestalReference } from './productNames'
 import { installerPlan, installerSvg } from './installerPlan'
-import { isLargePreview, thumbnailPlan } from './renderOverview'
+import { isLargePreview } from './renderOverview'
 import type { Plan, Point, Settings } from './planner'
 
 type Exposure = 'finished'|'boards'|'joists'|'bearers'|'pedestals'
@@ -25,23 +27,8 @@ const coordinates=(p:Point[])=>p.map(q=>`${q.x},${q.y}`).join(' ')
 const clampTilt=(value:number)=>Math.max(20,Math.min(80,value))
 const wrapRotation=(value:number)=>((value+180)%360+360)%360-180
 
-// Thumbnails use actual components and keep a fixed camera while the scene rotates.
-const LayerThumbnail=memo(function LayerThumbnail({plan:fullPlan,settings:s,exposure}:{plan:Plan;settings:Settings;exposure:Exposure}) {
-  const plan=useMemo(()=>thumbnailPlan(fullPlan),[fullPlan])
-  const box=bounds(plan.physical),angle=35*Math.PI/180,t=52*Math.PI/180
-  const project=(p:Point,z=0)=>{const q=s.direction==='vertical'?{x:p.y,y:p.x}:p,x=q.x-box.width/2,y=q.y-box.depth/2;return {x:x*Math.cos(angle)-y*Math.sin(angle),y:(x*Math.sin(angle)+y*Math.cos(angle))*Math.cos(t)-z*Math.sin(t)}}
-  const ground=-s.height/1000,boardBottom=-s.board.thickness/1000
-  const projected=plan.p.flatMap(p=>[project(p),project(p,ground)]),xs=projected.map(p=>p.x),ys=projected.map(p=>p.y),minX=Math.min(...xs)-.25,minY=Math.min(...ys)-.25
-  const showBoards=exposure==='finished'||exposure==='boards'
-  return <svg viewBox={`${minX} ${minY} ${Math.max(...xs)-minX+.25} ${Math.max(...ys)-minY+.25}`} aria-hidden="true" focusable="false">
-    <polygon points={coordinates(plan.p.map(p=>project(p,ground)))} fill="#dbe3d0"/>
-    <StructureDrawing plan={plan} settings={s} exposure={exposure} showSupports={true} rotation={35} tilt={52} project={p=>{const x=p.x-box.width/2,y=p.y-box.depth/2;return {x:x*Math.cos(angle)-y*Math.sin(angle),y:(x*Math.sin(angle)+y*Math.cos(angle))*Math.cos(t)-p.z*Math.sin(t)}}}/>
-    {showBoards?plan.boards.pieces.map((piece,i)=><path key={i} d={ringPath(boardRings(piece).map(r=>r.map(p=>project(p))))} fillRule="evenodd" fill={s.board.colour} stroke="#5f4f38" strokeWidth=".01"/>):null}
-    {exposure==='finished'&&s.skirting?plan.p.map((a,i)=>{const b=plan.p[(i+1)%plan.p.length],u=project(a),v=project(b);if(v.x<u.x)return null;return <polygon key={i} points={coordinates([project(a,boardBottom),project(b,boardBottom),project(b,boardBottom-(s.skirtingHeight??200)/1000),project(a,boardBottom-(s.skirtingHeight??200)/1000)])} fill={s.board.colour} stroke="#5f4f38" strokeWidth=".01"/>}):null}
-  </svg>
-})
 
-export default function DeckView({plan,settings:s,layer,showSupports,measurements=false}: {plan:Plan;settings:Settings;layer:'boards'|'frame'|'3d';showSupports:boolean;measurements?:boolean}) {
+function PlanDeckView({plan,settings:s,layer,showSupports,measurements=false}: {plan:Plan;settings:Settings;layer:'boards'|'frame'|'3d';showSupports:boolean;measurements?:boolean}) {
   const id=useId().replaceAll(':',''),[rotation,setRotation]=useState(35),[tilt,setTilt]=useState(52),[exposure,setExposure]=useState<Exposure>('finished'),[orbiting,setOrbiting]=useState(false)
   const drag=useRef<{pointerId:number;x:number;y:number;rotation:number;tilt:number}|null>(null)
   const [planZoom,setPlanZoom]=useState(1),[planRotation,setPlanRotation]=useState(0),[labels,setLabels]=useState(false)
@@ -131,4 +118,8 @@ export default function DeckView({plan,settings:s,layer,showSupports,measurement
     </>:<div className="view-legend">{layer==='boards'?<><span>Picture-frame boards</span><span>{plan.boards.fit.rows} infill rows</span><span><i style={{background:'#d2b18f'}}/>Unfilled space / installation gaps</span></>:plan.frame.layoutStatus==='unbuildable'?<><span><i style={{background:'#ae773f'}}/>Draft only · amber framing and bearings are unresolved</span><span>⊗ Area to correct</span><span>Quantities pending</span></>:<><span><i className="legend-joist"/>Alu-Joists / collectors</span><span><i className="legend-bearer"/>Alu-Joist bearers / collectors</span><span>◉ Actual pedestal bases</span><span>□ Supported stock joints</span><span>Support dimensions in mm</span></>}</div>}
     {plan.frame.layoutStatus==='unbuildable'&&layer!=='boards'?<div className="support-resolution viewer-notice" role="status"><strong>Support layout unresolved</strong>{plan.frame.issues[0]}<p>Frame and pedestal quantities stay pending until this is resolved in Supports.</p></div>:null}
   </div>
+}
+
+export default function DeckView(props:{plan:Plan;settings:Settings;layer:'boards'|'frame'|'3d';showSupports:boolean;measurements?:boolean;prices?:Record<string,string>;onShowMaterial?:(key:string)=>void}){
+  return props.layer==='3d'?<DeckScene plan={props.plan} s={props.settings} showSupports={props.showSupports} prices={props.prices??{}} onShowMaterial={props.onShowMaterial}/>:<PlanDeckView {...props}/>
 }

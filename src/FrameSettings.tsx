@@ -1,4 +1,5 @@
 import OpenIcon from './OpenIcon'
+import PedestalSurvey from './PedestalSurveyPanel'
 import { useMemo, useState } from 'react'
 import { ChoiceField, Field } from './SettingControls'
 import type { ControlLabelProps } from './SettingControls'
@@ -28,7 +29,7 @@ export default function FrameSettings({settings:s,onChange,plan,prices,products,
   const pedestal=PEDESTAL_MODELS.find(p=>p.name===s.pedestalName&&p.min===s.pedestalMin&&p.max===s.pedestalMax&&p.diameter===(s.pedestalDiameter??150))
   const savedPedestal=appliedProduct(s,'pedestal')
   const changePedestal=(patch:Partial<Settings>)=>set({...patch,pedestalSelection:'manual',edgeDetailConfirmed:false,...(pedestal?{pedestalName:CUSTOM_PEDESTAL}:{})})
-  const selectedFits=fit.fits,frameDepth=rule.joist+rule.bearer
+  const selectedFits=plan?.heightFits??fit.fits,frameDepth=rule.joist+rule.bearer
   const confirmations=Number(!s.edgeDetailConfirmed)+Number(!s.confirmed)
   return <div className="frame-settings"><div className="section-heading"><h2>Alu-Joist settings</h2></div>
     {s.supportLayout?<div className="manual-support-note"><strong>{supportLayoutIsCurrent(s)?'Manual support layout':'Supports regenerated for this outline'}</strong><p>{supportLayoutIsCurrent(s)?'Edits are saved with this project. Choosing another frame or automatic selection regenerates its layout.':'Earlier support edits are kept with their original outline. The changed outline uses a new automatic layout.'}</p><button className="button secondary full" onClick={onEditSupports}>Edit or regenerate layout</button></div>:null}
@@ -52,8 +53,8 @@ export default function FrameSettings({settings:s,onChange,plan,prices,products,
     </section>
     <section className={`selected-frame-system ${selectedFits?'height-fits':'needs-review'}`} aria-label="Selected support system">
       <div className="selected-system-heading"><span>Height check</span><span className="support-mode-badge">{automatic&&automaticPedestal?'Automatic':'Manual override'}</span></div>
-      <div className="support-height-summary" role="status" aria-live="polite"><strong>{pending?'Calculating support system…':selectedFits?'Fits customer height':fit.label}</strong>
-        {selectedFits?<p>Required pedestal adjustment <b>{heightNumber(fit.required.min)}–{heightNumber(fit.required.max)} mm</b></p>:<p>{anyAutomatic?recommendation.error||selectedOption?.reason||fit.reason:fit.reason}</p>}
+      <div className="support-height-summary" role="status" aria-live="polite"><strong>{pending?'Calculating support system…':selectedFits?'Fits customer height':plan&&s.groundSurvey?.length?'Surveyed heights need review':fit.label}</strong>
+        {selectedFits?<p>Required pedestal adjustment <b>{heightNumber(plan?.range.min??fit.required.min)}–{heightNumber(plan?.range.max??fit.required.max)} mm</b></p>:<p>{plan&&s.groundSurvey?.length?`Required adjustment ${heightNumber(plan.range.min)}–${heightNumber(plan.range.max)} mm. Product range ${s.pedestalMin}–${s.pedestalMax} mm.`:anyAutomatic?recommendation.error||selectedOption?.reason||fit.reason:fit.reason}</p>}
       </div>
       {fit.valid&&fit.average>=0?<><div className="height-stack" role="img" aria-label={`${s.board.thickness} mm decking plus ${frameDepth} mm frame leaves ${heightNumber(fit.average)} mm for the pedestal at the supplied ${heightNumber(s.height)} mm build-up height`}><span className="stack-board" style={{flex:s.board.thickness}}/><span className="stack-frame" style={{flex:frameDepth}}/><span className="stack-pedestal" style={{flex:fit.average}}/></div><div className="height-stack-key"><span><i className="stack-board"/>Boards <b>{s.board.thickness}</b></span><span><i className="stack-frame"/>Frame <b>{frameDepth}</b></span><span><i className="stack-pedestal"/>Pedestal <b>{heightNumber(fit.average)}</b></span></div><p className="height-stack-total">Total: {heightNumber(s.height)} mm · ground variation sets the adjustment range.</p></>:null}
       <p className="selected-product-range">Product adjustment: {heightNumber(s.pedestalMin)}–{heightNumber(s.pedestalMax)} mm</p>
@@ -62,6 +63,7 @@ export default function FrameSettings({settings:s,onChange,plan,prices,products,
     {plan?.frame.geometryPass&&plan.frame.supportArrangement==='same-depth-headers'?<p className="field-note">Same-depth headers connect the joists where individual pedestal rows cannot fit. Connection details require supplier confirmation.</p>:null}
     {plan&&!plan.frame.geometryPass?<div className="support-resolution" role="status"><strong>Support layout needs review</strong><p>{plan.frame.placementDiagnostics[0]?.detail??plan.frame.issues[0]}</p>{plan.frame.placementDiagnostics[0]?<p className="support-failed-member">Search member P-{plan.frame.placementDiagnostics[0].memberIndex+1} · {Math.round(Math.hypot(plan.frame.placementDiagnostics[0].member.b.x-plan.frame.placementDiagnostics[0].member.a.x,plan.frame.placementDiagnostics[0].member.b.y-plan.frame.placementDiagnostics[0].member.a.y)*1000)} mm. Inspect its edge-clear and blocked positions in the editor.</p>:null}<button type="button" className="button secondary full" onClick={onEditSupports}>Inspect positions &amp; setting options</button>{s.joints==='breaker'&&s.breakerMode==='manual'&&plan.boards.breakers.length>0&&plan.frame.issues.some(q=>q.includes('upper support faces overlap'))?<button type="button" className="button secondary full" onClick={()=>set({breakerMode:'balanced',breakerPositions:[],edgeDetailConfirmed:false,confirmed:false})}>Try automatic breaker layout</button>:null}</div>:null}
 
+    {plan?<PedestalSurvey plan={plan} s={s} onChange={onChange}/>:null}
     <details id="support-advanced-settings" className="support-advanced" open={advanced} onToggle={e=>setAdvanced(e.currentTarget.open)}>
       <summary><span><strong>Advanced settings</strong><small>Stock, spacing, bearing &amp; clearance</small></span><span className="advanced-chevron" aria-hidden="true">⌄</span></summary>
       <section className="support-settings-group"><h3>Stock &amp; spacing</h3>

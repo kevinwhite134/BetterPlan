@@ -1,3 +1,4 @@
+import { pedestalHeights } from './pedestalSurvey.ts'
 import { heightFit } from './heightFit.ts'
 import { FRAME_NAMES, frameRule, planDeck, validateSettings } from './planner.ts'
 import type { Frame, Plan, Settings } from './planner.ts'
@@ -48,7 +49,7 @@ function selectionReason(selected:FrameChoice|null,objective:SelectionObjective,
 // the current product metadata for callers that inspect their full settings.
 export function recommendFrames(s:Settings,overrides:Record<string,string>={}):FrameRecommendation{
   if(validateSettings(s))return computeRecommendations(s,overrides)
-  const key=JSON.stringify([{...s,selectionObjective:selectionObjective(s),board:{width:s.board?.width,thickness:s.board?.thickness,stock:s.board?.stock,gap:s.board?.gap,endGap:s.board?.endGap},confirmed:false,edgeDetailConfirmed:false},Object.entries(overrides).sort(([a],[b])=>a.localeCompare(b))])
+  const key=JSON.stringify([{...s,quotation:undefined,selectionObjective:selectionObjective(s),board:{width:s.board?.width,thickness:s.board?.thickness,stock:s.board?.stock,gap:s.board?.gap,endGap:s.board?.endGap},confirmed:false,edgeDetailConfirmed:false},Object.entries(overrides).sort(([a],[b])=>a.localeCompare(b))])
   const cached=recommendationCache.get(key)
   if(cached){
     const rebase=(c:FrameChoice)=>{const p=c.settings;return {...c,settings:{...s,supportLayout:c.frame===s.frame?s.supportLayout:undefined,frame:c.frame,pedestalName:p.pedestalName,pedestalMin:p.pedestalMin,pedestalMax:p.pedestalMax,pedestalDiameter:p.pedestalDiameter,...resolvedBreakers(s,p)}}}
@@ -74,14 +75,16 @@ function computeRecommendations(s:Settings,overrides:Record<string,string>):Fram
     const products=automaticPedestal?automaticProducts(s):[current]
     for(const product of products){
       const supplied:Settings={...s,supportLayout:frame===s.frame?s.supportLayout:undefined,frame,pedestalName:product.name,pedestalMin:product.min,pedestalMax:product.max,pedestalDiameter:product.diameter}
-      const fit=heightFit(supplied,rule);if(!fit.fits)continue
+      const fit=heightFit(supplied,rule);if(!fit.fits&&!supplied.groundSurvey?.length)continue
       try{
         const candidate=keepBreakersInBounds(supplied)
         let plan=geometry.get(product.diameter)
         if(!plan){plan=planDeck(candidate);geometry.set(product.diameter,plan)}
         if(!plan.frame.geometryPass||plan.frame.layoutStatus!=='ready'){if(plan.frame.issues[0])errors.push(plan.frame.issues[0]);continue}
+        const surveyed=pedestalHeights(plan.frame.pedestals,candidate,rule)
+        if(!surveyed.fits){errors.push('Surveyed ground levels require a different pedestal adjustment range.');continue}
         const estimate=materialEstimate(plan,resolvedPricing(candidate,overrides)),supportLines=estimate.lines.filter(line=>line.key==='pedestals'||line.key.startsWith('profile')||line.key.endsWith('Joiners'))
-        const choice:FrameChoice={frame,settings:candidate,pedestals:plan.frame.pedestals.length,memberLength:plan.frame.members.reduce((sum,m)=>sum+Math.hypot(m.b.x-m.a.x,m.b.y-m.a.y),0),required:fit.required,usesCurrentPedestal:product===current,
+        const choice:FrameChoice={frame,settings:candidate,pedestals:plan.frame.pedestals.length,memberLength:plan.frame.members.reduce((sum,m)=>sum+Math.hypot(m.b.x-m.a.x,m.b.y-m.a.y),0),required:surveyed.range??fit.required,usesCurrentPedestal:product===current,
           materialCostCents:estimate.complete?estimate.subtotalCents:null,frameCostCents:supportLines.every(line=>line.cents!==null)?supportLines.reduce((sum,line)=>sum+line.cents!,0):null,
           stockLengths:Object.values(plan.frameCuts).reduce((sum,bars)=>sum+bars.length,0),frameLayers:rule.bearer?2:1,profileTypes:[rule.joist,rule.bearer].filter((height,i,a)=>height>0&&a.indexOf(height)===i).length,
           memberPieces:Object.values(plan.framePieces).reduce((sum,pieces)=>sum+pieces.length,0),pedestalModels:1,scoreExplanation:''}

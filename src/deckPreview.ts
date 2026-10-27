@@ -1,3 +1,4 @@
+import { pedestalHeight, surveyReadings } from './pedestalSurvey.ts'
 import { boardRings, ringPath } from './shapeGeometry.ts'
 import { bounds } from './planner.ts'
 import type { Plan, Point, Settings } from './planner.ts'
@@ -22,7 +23,8 @@ export function deckPreviewSvg(plan:Plan,s:Settings):string{
   const fronts=plan.p.map((a,i)=>({a,b:plan.p[(i+1)%plan.p.length]})).filter(({a,b})=>{const u=physical(a),v=physical(b);return ((v.y-u.y)*Math.sin(angle)-(v.x-u.x)*Math.cos(angle))*sign>1e-7}).sort((u,v)=>project(u.a).y+project(u.b).y-project(v.a).y-project(v.b).y)
   const face=(a:Point,b:Point,top:number,bottom:number)=>[project(a,top),project(b,top),project(b,bottom),project(a,bottom)].map(q=>`${q.x},${q.y}`).join(' ')
   const parts=[polygon(coordinates(plan.p,ground-.015),'#344b37','none',0,'opacity=".08"')]
-  for(const p of plan.frame.pedestals){const a=project(p,head),b=project(p,ground),r=(s.pedestalDiameter??150)/2000;parts.push(`<ellipse cx="${b.x}" cy="${b.y}" rx="${r}" ry="${r*Math.cos(tilt)}" fill="#4d5c47"/>`,`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#4d5c47" stroke-width="${Math.min(PEDESTAL_COLUMN_DIAMETER,r*1.6)}"/>`)}
+  const readings=surveyReadings(s)
+  for(const p of plan.frame.pedestals){const ground=pedestalHeight(p,s,plan.frame.rule,readings).ground,a=project(p,head),b=project(p,ground),r=(s.pedestalDiameter??150)/2000;parts.push(`<ellipse cx="${b.x}" cy="${b.y}" rx="${r}" ry="${r*Math.cos(tilt)}" fill="#4d5c47"/>`,`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#4d5c47" stroke-width="${Math.min(PEDESTAL_COLUMN_DIAMETER,r*1.6)}"/>`)}
   for(const m of plan.frame.members)parts.push(line(m.a,m.b,m.kind==='bearer'?head+m.size/2000:boardBottom-plan.frame.rule.joist/2000,m.kind==='bearer'?'#8b969f':'#b8c0c6',m.kind==='bearer'?.055:.035))
   for(const {a,b} of fronts)parts.push(polygon(face(a,b,0,boardBottom),shade(.8)))
   parts.push(`<path d="${ringPath([plan.p,...plan.holes].map(r=>r.map(p=>project(p))))}" fill-rule="evenodd" fill="#67553f"/>`)
@@ -33,11 +35,11 @@ export function deckPreviewSvg(plan:Plan,s:Settings):string{
 
 export function deckPreviewUrl(svg:string){return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}
 
-export async function deckPreviewPng(svg:string):Promise<string>{
+export async function deckPreviewPng(svg:string,width=1440,height=800):Promise<string>{
   const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}))
   try{
     const image=new Image();image.src=url;await image.decode()
-    const canvas=document.createElement('canvas');canvas.width=1440;canvas.height=800
+    const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height
     const context=canvas.getContext('2d');if(!context)throw new Error('Image rendering is unavailable.')
     context.drawImage(image,0,0,canvas.width,canvas.height)
     return canvas.toDataURL('image/png')

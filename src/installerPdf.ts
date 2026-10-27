@@ -92,9 +92,9 @@ export async function exportInstallerPdf(plan:Plan,s:Settings,options:{now?:Date
   if(model.cutouts.length)table('Cutout setting-out','Clear opening boundaries. Coordinates share the outside outline datum; perimeter boards and trim framing sit outside each opening.',
     ['Opening','Name','Point','X','Y','Next segment'],
     model.cutouts.flatMap(h=>h.points.map((p,i)=>{const b=h.points[(i+1)%h.points.length];return [h.id,h.name,String(i+1),dimensionText(p.x),dimensionText(p.y),dimensionText(Math.hypot(b.x-p.x,b.y-p.y))]})),[.10,.30,.10,.16,.16,.18])
-  table('Pedestal setting-out schedule','IDs match the pedestal CSV. Set individual heights from surveyed ground levels; the range below is the global design range.',
-    ['Pedestal ID','X','Y','Base diameter','Height min','Height max','Shared head'],
-    model.pedestals.map(p=>[p.id,dimensionText(p.x),dimensionText(p.y),dimensionText(p.diameter),dimensionText(model.height.min),dimensionText(model.height.max),p.shared?'Yes':'No']),[.13,.16,.16,.16,.14,.14,.11])
+  table('Pedestal setting-out schedule','IDs match the pedestal CSV. Set individual heights from surveyed ground levels; surveyed positions use individual ground levels; other positions use the estimated range.',
+    ['Pedestal ID','X','Y','Base diameter','Height min','Height max','Ground level','Shared head'],
+    model.pedestals.map(p=>[p.id,dimensionText(p.x),dimensionText(p.y),dimensionText(p.diameter),dimensionText(p.heightMin),dimensionText(p.heightMax),p.groundLevel===null?'Not surveyed':dimensionText(p.groundLevel),p.shared?'Yes':'No']),[.12,.13,.13,.13,.13,.13,.12,.11])
   if(model.centreLines.length)table('Framing centre-line setting-out','Coordinates from datum in mm. Coordinate gaps describe adjacent parallel lines; they are not a substitute for individual member span checks.',
     ['Line ID','Function','Datum axis','Coordinate','Gap from previous line'],
     model.centreLines.map(c=>[c.id,c.kind,c.axis,dimensionText(c.coordinate),c.spacing===null?'First line':dimensionText(c.spacing)]),[.14,.29,.15,.20,.22])

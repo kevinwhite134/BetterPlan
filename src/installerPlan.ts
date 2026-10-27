@@ -1,3 +1,4 @@
+import { pedestalHeights } from './pedestalSurvey.ts'
 import { FRAME_NAMES } from './planner.ts'
 import type { Plan, Point, Settings } from './planner.ts'
 import { interiorAngle } from './editorGeometry.ts'
@@ -20,14 +21,15 @@ export function installerPlan(plan:Plan,s:Settings){
     ...unique(plan.frame.members.filter(m=>m.kind==='bearer'&&Math.abs(m.a.y-m.b.y)<1e-7).map(m=>m.a.y*1000)).map((coordinate,i,a)=>({id:`BCL-${String(i+1).padStart(2,'0')}`,kind:'Bearer centre line',axis:bearerAxis,coordinate,spacing:i?coordinate-a[i-1]:null})),
     ...plan.boards.breakers.map((x,i,a)=>({id:`BR-${String(i+1).padStart(2,'0')}`,kind:'Breaker centre line',axis:joistAxis,coordinate:x*1000,spacing:i?(x-a[i-1])*1000:null})),
   ]
+  const survey=pedestalHeights(plan.frame.pedestals,s,plan.frame.rule)
   let hash=2166136261
-  for(const c of JSON.stringify(s)){hash=Math.imul(hash^c.charCodeAt(0),16777619)>>>0}
+  for(const c of JSON.stringify({...s,quotation:undefined})){hash=Math.imul(hash^c.charCodeAt(0),16777619)>>>0}
   return {
     reference:`BD-${hash.toString(16).toUpperCase().padStart(8,'0')}`,corners,edges,pictureFrameRows:s.pictureFrameRows??1,cornerGaps:plan.boards.fit.cornerGaps.map(r=>r.map(physical)),
     cutouts:plan.cutouts.map((h,i)=>({id:`H-${String(i+1).padStart(2,'0')}`,name:h.name,points:h.polygon.map(mm)})),
     width:Math.max(...corners.map(p=>p.x)),depth:Math.max(...corners.map(p=>p.y)),
     members:plan.frame.members.map((m,i)=>({id:planId('M',i),a:physical(m.a),b:physical(m.b),kind:m.kind,size:m.size,role:m.role,openingIndex:m.openingIndex,name:frameMemberName(m.size,m.kind,m.role),length:Math.hypot(m.b.x-m.a.x,m.b.y-m.a.y)*1000})),
-    pedestals:plan.frame.pedestals.map((p,i)=>({id:pedestalReference(s.pedestalName,i),...physical(p),diameter:s.pedestalDiameter??150,shared:plan.frame.junctions.some(j=>Math.hypot(j.x-p.x,j.y-p.y)<1e-6)})),
+    pedestals:plan.frame.pedestals.map((p,i)=>({id:pedestalReference(s.pedestalName,i),...physical(p),heightMin:survey.rows[i].min,heightMax:survey.rows[i].max,groundLevel:survey.rows[i].level,heightFits:survey.rows[i].fits,diameter:s.pedestalDiameter??150,shared:plan.frame.junctions.some(j=>Math.hypot(j.x-p.x,j.y-p.y)<1e-6)})),
     pedestalCode:pedestalAbbreviation(s.pedestalName),centreLines,
     stockJoints:plan.frame.splices.map((p,i)=>({id:`FJ-${String(i+1).padStart(3,'0')}`,...physical(p)})),
     splices:plan.frame.splices.map(physical),frame:FRAME_NAMES[s.frame],area:plan.area,

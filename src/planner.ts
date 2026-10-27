@@ -12,12 +12,16 @@ import { supportLayoutIsCurrent } from './supportLayoutState.ts'
 import type { ProductSelections } from './productLibrary.ts'
 import { appliedProduct } from './productLibrary.ts'
 import { frameHardware } from './frameHardware.ts'
+import { pedestalHeights } from './pedestalSurvey.ts'
+import { quotationDetailsError } from './quotationDetails.ts'
+import type { QuotationDetails } from './quotationDetails.ts'
 // All geometry uses metres. Report limits are transcribed, not interpolated.
 export type Point = { x: number; y: number }
 export type Cutout = { id:string; name:string; polygon:Point[]; shape?:'rectangle'|'circle'|'oval'|'custom' }
 export type Frame = 'small' | 'big' | 'small-small' | 'big-small'
 export type BoardProfile = { id: string; name: string; width: number; thickness: number; stock: number; colour: string; colourName: string; gap: number; endGap: number }
 export type Settings = {
+  groundSurvey?:{x:number;y:number;level:number}[]; quotation?:QuotationDetails;
   products?:ProductSelections;
   polygon: Point[]; cutouts?:Cutout[]; direction: 'horizontal' | 'vertical'; joints: 'breaker' | 'butt';
   board: BoardProfile; frame: Frame; load: 3 | 5; height: number; variation: number;
@@ -400,6 +404,11 @@ function openingBorder(hole:Point[],s:Settings,openingIndex:number):Piece[]{
 export type Material = { key: string; name: string; qty: number; unit: string; note: string }
 export function validateSettings(s: Settings) {
   if(!s||!Array.isArray(s.polygon)||!s.polygon.every(p=>p&&typeof p.x==='number'&&typeof p.y==='number')||!s.board) return 'Invalid project data.'
+  const quoteError=quotationDetailsError(s.quotation);if(quoteError)return quoteError
+  if(s.groundSurvey!==undefined){
+    if(!Array.isArray(s.groundSurvey)||s.groundSurvey.length>150000||s.groundSurvey.some(r=>!r||![r.x,r.y,r.level].every(Number.isFinite)||Math.abs(r.x)>1000||Math.abs(r.y)>1000||Math.abs(r.level)>2000))return 'Ground readings need finite site coordinates and levels between -2,000 and 2,000 mm.'
+    const keys=s.groundSurvey.map(r=>`${Math.round(r.x*100000)},${Math.round(r.y*100000)}`);if(new Set(keys).size!==keys.length)return 'Use one ground reading per pedestal coordinate.'
+  }
   if(!['horizontal','vertical'].includes(s.direction)||!['breaker','butt'].includes(s.joints)||!['small','big','small-small','big-small'].includes(s.frame)||![3,5].includes(s.load)) return 'Invalid direction, joint type, frame or design load.'
   if(s.pedestalSelection!==undefined&&!['auto','manual'].includes(s.pedestalSelection))return 'Invalid pedestal selection mode.'
   if(s.frameSelection!==undefined&&!['auto','manual'].includes(s.frameSelection))return 'Invalid frame selection mode.'
@@ -529,9 +538,10 @@ export function planDeck(s: Settings) {
     frameCuts[size]=packCuts(framePieces[size].map(q=>q.length),s.frameStock,s.kerf/1000)
   }
   // The cards, required adjustment and report all use the same height check.
-  const heightCheck=heightFit(s,frame.rule),range=heightCheck.required,heightFits=heightCheck.fits
+  const heightCheck=heightFit(s,frame.rule),survey=pedestalHeights(frame.pedestals,s,frame.rule),range=survey.range??heightCheck.required,heightFits=survey.rows.length?survey.fits:heightCheck.fits
   const warnings: string[]=[]
-  if(!heightFits) warnings.push(heightCheck.reason)
+  if(!heightFits) warnings.push(survey.surveyed?'One or more pedestal adjustments fall outside the selected product range at the surveyed ground levels.':heightCheck.reason)
+  if(survey.unmatched)warnings.push(`${survey.unmatched} saved ground readings do not match current pedestal coordinates. Resurvey the changed support positions.`)
   if(!s.confirmed) warnings.push('Confirm the selected board is approved for this Alu-Joist K Series frame and the chosen joist centres. The report covers BetterDeck-recommended composite decking only.')
   if(s.joistSpacing>400)warnings.push('Entered joist centres exceed the report’s 400 mm decking limit. Confirm the board supplier’s span approval for this spacing.')
   if(s.frame==='small-small'&&s.load===5) warnings.push('Report 4B lists 800 mm support spacing at 5 kN/m² versus 700 mm at 3 kN/m². These exact values are retained; confirm with the supplier before construction.')
