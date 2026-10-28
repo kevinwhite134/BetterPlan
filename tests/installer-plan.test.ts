@@ -37,7 +37,7 @@ test('measured SVG is finite, escaped and deterministic, and keeps real-sized pe
   assert.equal(m.reference,installerPlan(planDeck(DEFAULT_SETTINGS),DEFAULT_SETTINGS).reference)
 })
 
-test('installer PDF contains scalable A3 drawings and automatically paginated complete schedules',async()=>{
+test('installer PDF keeps scalable A3 drawings and the concise installation guide',async()=>{
   const s=DEFAULT_SETTINGS,plan=planDeck(s),bytes=await exportInstallerPdf(plan,s,{now:new Date('2026-10-25T12:00:00Z')}),pdf=await PDFDocument.load(bytes)
   assert.ok(pdf.getPageCount()>=5)
   assert.ok(pdf.getTitle()?.includes(installerPlan(plan,s).reference))

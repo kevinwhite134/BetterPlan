@@ -52,7 +52,7 @@ export type PlanMark=
 export const PLAN_COLOURS={ink:'#303728',muted:'#7c8473',joist:'#426c52',bearer:'#aa7b32',noggin:'#a66850',dimension:'#505c42',paper:'#ffffff'}
 
 // Paper coordinates in mm. A shared scene drives both the SVG and vector PDF.
-export function installerDrawing(model:InstallerPlan,width=420,height=205,font=3){
+export function installerDrawing(model:InstallerPlan,width=420,height=205,font=3,showIds=true){
   const margin=font>=4?25:20,scale=Math.max(model.width/(width-2*margin),model.depth/(height-2*margin))
   const printScale=[5,10,20,25,50,75,100,125,150,200,250,500].find(s=>s>=scale)??Math.ceil(scale/100)*100
   const x=(width-model.width/printScale)/2,y=(height-model.depth/printScale)/2
@@ -91,13 +91,13 @@ export function installerDrawing(model:InstallerPlan,width=420,height=205,font=3
   for(const e of model.edges){
     const a=project(e.a),b=project(e.b);line(a,b,PLAN_COLOURS.ink,.28)
     // Very short edges are identified in the schedule rather than unreadable chains.
-    if(e.length/printScale>font*5)dim(a,b,8*sign,`${e.id}  ${dimensionText(e.length)}`)
+    if(e.length/printScale>font*5)dim(a,b,8*sign,showIds?`${e.id}  ${dimensionText(e.length)}`:dimensionText(e.length))
   }
   for(const h of model.cutouts){
     for(let i=0;i<h.points.length;i++)line(project(h.points[i]),project(h.points[(i+1)%h.points.length]),PLAN_COLOURS.ink,.35)
     const minX=Math.min(...h.points.map(p=>p.x)),maxX=Math.max(...h.points.map(p=>p.x)),minY=Math.min(...h.points.map(p=>p.y)),maxY=Math.max(...h.points.map(p=>p.y))
     const centre=project({x:(minX+maxX)/2,y:(minY+maxY)/2})
-    label({x:centre.x,y:centre.y-font},h.id,font)
+    label({x:centre.x,y:centre.y-font},showIds?h.id:h.name,font)
     label({x:centre.x,y:centre.y+font*.7},`${dimensionText(maxX-minX)} x ${dimensionText(maxY-minY)}`,font*.8)
   }
   // Centre-line chains use a separate datum baseline from perimeter lengths.
@@ -128,7 +128,7 @@ export function installerDrawing(model:InstallerPlan,width=420,height=205,font=3
       if(length/printScale>font*8)dim(project(a),project(b),4,`${dimensionText(length)} c/c`)
     }
   }
-  for(const c of model.corners){
+  if(showIds)for(const c of model.corners){
     const q=project(c),prev=project(model.corners[(model.corners.indexOf(c)+model.corners.length-1)%model.corners.length]),next=project(model.corners[(model.corners.indexOf(c)+1)%model.corners.length])
     const l1=Math.hypot(q.x-prev.x,q.y-prev.y),l2=Math.hypot(next.x-q.x,next.y-q.y)
     let nx=sign*((q.y-prev.y)/l1+(next.y-q.y)/l2),ny=-sign*((q.x-prev.x)/l1+(next.x-q.x)/l2),length=Math.hypot(nx,ny)
@@ -140,15 +140,15 @@ export function installerDrawing(model:InstallerPlan,width=420,height=205,font=3
   for(const p of model.stockJoints){
     const q=project(p),r=.8,base=model.pedestals.find(b=>Math.hypot(b.x-p.x,b.y-p.y)<.1)
     line({x:q.x-r,y:q.y-r},{x:q.x+r,y:q.y+r},PLAN_COLOURS.ink,.2);line({x:q.x-r,y:q.y+r},{x:q.x+r,y:q.y-r},PLAN_COLOURS.ink,.2)
-    if(model.stockJoints.length<=36)callout(q,p.id,font*.75,(base?.diameter??0)/printScale/2+4)
+    if(showIds&&model.stockJoints.length<=36)callout(q,p.id,font*.75,(base?.diameter??0)/printScale/2+4)
   }
   if(breakers.length<=8)for(const guide of breakers){
     const at=guide.axis==='X'?{x:guide.coordinate,y:model.depth/2}:{x:model.width/2,y:guide.coordinate}
-    callout(project(at),`${guide.id} ${guide.axis}=${dimensionText(guide.coordinate)}`,font*.8,8)
+    callout(project(at),`${showIds?guide.id:'Breaker'} ${guide.axis}=${dimensionText(guide.coordinate)}`,font*.8,8)
   }
   // Short, numbered callouts with leaders, choosing an unoccupied position.
   // Dense layouts retain every exact coordinate in the downloadable schedules.
-  const labelled=model.pedestals.length<=160
+  const labelled=showIds&&model.pedestals.length<=160
   if(labelled)for(const p of model.pedestals){
     callout(project(p),p.id,font*.82,p.diameter/printScale/2+3)
   }

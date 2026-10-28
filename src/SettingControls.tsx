@@ -19,10 +19,10 @@ export function Field({label,unit,children,hint,help,className=''}:{label:string
 
 type ChoiceValue=string|number|boolean
 type ChoiceOption<T>={value:T;label:ReactNode;ariaLabel?:string}
-export function ChoiceButtons<T extends ChoiceValue>({label,value,options,onChange,disabled=false}:{label:string;value:T;options:ChoiceOption<T>[];onChange:(value:T)=>void;disabled?:boolean}){
-  return <div className="segmented choice-control" role="group" aria-label={label}>{options.map(option=><button type="button" key={String(option.value)} className={value===option.value?'selected':''} aria-pressed={value===option.value} aria-label={option.ariaLabel} disabled={disabled} onClick={()=>{if(value!==option.value)onChange(option.value)}}>{option.label}</button>)}</div>
+export function ChoiceButtons<T extends ChoiceValue>({label,value,options,onChange,disabled=false,allowReselect=false}:{label:string;value:T;options:ChoiceOption<T>[];onChange:(value:T)=>void;disabled?:boolean;allowReselect?:boolean}){
+  return <div className="segmented choice-control" role="group" aria-label={label}>{options.map(option=><button type="button" key={String(option.value)} className={value===option.value?'selected':''} aria-pressed={value===option.value} aria-label={option.ariaLabel} disabled={disabled} onClick={()=>{if(allowReselect||value!==option.value)onChange(option.value)}}>{option.label}</button>)}</div>
 }
 
-export function ChoiceField<T extends ChoiceValue>({label,ariaLabel,value,options,onChange,disabled,help,compact=false}:{label:string;ariaLabel?:string;value:T;options:ChoiceOption<T>[];onChange:(value:T)=>void;disabled?:boolean;help?:SettingHelp;compact?:boolean}){
-  return <div className={`field choice-field ${compact?'compact':''}`}><SettingHeading label={label} help={help}/><ChoiceButtons label={ariaLabel??label} value={value} options={options} onChange={onChange} disabled={disabled}/></div>
+export function ChoiceField<T extends ChoiceValue>({label,ariaLabel,value,options,onChange,disabled,help,compact=false,allowReselect=false}:{label:string;ariaLabel?:string;value:T;options:ChoiceOption<T>[];onChange:(value:T)=>void;disabled?:boolean;help?:SettingHelp;compact?:boolean;allowReselect?:boolean}){
+  return <div className={`field choice-field ${compact?'compact':''}`}><SettingHeading label={label} help={help}/><ChoiceButtons label={ariaLabel??label} value={value} options={options} onChange={onChange} disabled={disabled} allowReselect={allowReselect}/></div>
 }

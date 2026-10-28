@@ -4,6 +4,9 @@ import { dimensionText, installerDrawing, installerPlan, PLAN_COLOURS } from './
 import type { InstallerDrawing } from './installerPlan.ts'
 import type { Plan, Settings } from './planner.ts'
 import { pdfBrand } from './pdfBrand.ts'
+import { appendInstallationGuide } from './installationGuidePdf.ts'
+import { installerReferenceSelection, loadInstallerReferenceAssets } from './installerReferences.ts'
+import type { InstallerReferenceAssets } from './installerReferences.ts'
 
 const MM=72/25.4
 const colour=(hex:string)=>rgb(parseInt(hex.slice(1,3),16)/255,parseInt(hex.slice(3,5),16)/255,parseInt(hex.slice(5,7),16)/255)
@@ -34,7 +37,7 @@ function drawScene(page:PDFPage,font:PDFFont,d:InstallerDrawing,offsetX:number,o
   }
 }
 
-export async function exportInstallerPdf(plan:Plan,s:Settings,options:{now?:Date;logo?:Uint8Array}={}){
+export async function exportInstallerPdf(plan:Plan,s:Settings,options:{now?:Date;logo?:Uint8Array;references?:InstallerReferenceAssets}={}){
   if(!plan.frame.geometryPass)throw new Error('Resolve the support geometry before downloading an installer plan.')
   const model=installerPlan(plan,s),doc=await PDFDocument.create(),font=await doc.embedFont(StandardFonts.Helvetica),bold=await doc.embedFont(StandardFonts.HelveticaBold)
   const now=options.now??new Date(),date=new Intl.DateTimeFormat('en-IE',{dateStyle:'medium',timeZone:'Europe/Dublin'}).format(now)
@@ -50,7 +53,7 @@ export async function exportInstallerPdf(plan:Plan,s:Settings,options:{now?:Date
     rule(page,14,36,w-14,36,'#d8dfcb')
   }
   const cover=doc.addPage([W*MM,H*MM]);header(cover,'Framing & pedestal setting-out plan')
-  const drawing=installerDrawing(model,W-28,H-108,3)
+  const drawing=installerDrawing(model,W-28,H-108,3,false)
   drawScene(cover,font,drawing,14,41)
   const y=H-64
   text(cover,bold,`Scale 1:${drawing.scale} at A3 - print at 100%`,14,y,3)
@@ -60,7 +63,7 @@ export async function exportInstallerPdf(plan:Plan,s:Settings,options:{now?:Date
   const legendX=W>300?145:105
   text(cover,font,'Green: Alu-Joists / rim   Ochre: bearers   Brown: noggins',legendX,y,2.5)
   text(cover,font,'Circles: actual pedestal bases   Crosses: stock splices',legendX,y+5,2.5)
-  text(cover,font,`${model.pedestalCode} (n): ${model.pedestal} position n`,legendX,y+10,2.3)
+  text(cover,font,`${model.pedestals.length} actual pedestal positions shown`,legendX,y+10,2.3)
   rule(cover,14,y+12,W-14,y+12,'#d8dfcb')
   const left=14,right=W>300?W*.54:W*.53
   for(const [i,line] of [`Board-driven frame / ${model.frame}`,`Area ${model.area.toFixed(2)} m² | Load ${model.load} kN/m² | Joist centres max ${model.joistCentres} mm`,`Finished deck ${model.finishedHeight} mm | Ground variation ±${model.variation} mm`].entries())text(cover,i===0?bold:font,line,left,y+19+i*5,W>300?2.8:2.4)
@@ -70,52 +73,13 @@ export async function exportInstallerPdf(plan:Plan,s:Settings,options:{now?:Date
   text(cover,bold,model.heightFits?'FOR SITE VERIFICATION':'PEDESTAL HEIGHT RANGE NEEDS REVIEW',14,H-17,2.6,model.heightFits?'#626c2c':'#9c4e31')
   text(cover,font,'Verify dimensions on site. Supplier design of connections, perimeter framing and product compatibility is still required.',14,H-12,2.25)
 
-  // Automatic schedules include every coordinate, including dense layouts where
-  // individual callouts would otherwise collide on the overview drawing.
-  const table=(title:string,description:string,headers:string[],rows:string[][],ratios:number[])=>{
-    let page:PDFPage,y=0
-    const widths=ratios.map(r=>r*392)
-    const next=()=>{page=doc.addPage([420*MM,297*MM]);header(page,title);text(page,font,description,14,43,2.8);y=51;let x=14;for(const [i,h]of headers.entries()){page.drawRectangle({x:x*MM,y:page.getHeight()-(y+8)*MM,width:widths[i]*MM,height:8*MM,color:colour('#626c2c')});text(page,bold,h,x+2,y+5.3,2.8,'#ffffff');x+=widths[i]}y+=8}
-    next()
-    for(const [index,row]of rows.entries()){
-      const cells=row.map((v,i)=>wrap(font,v,2.8,widths[i]-4)),height=Math.max(7,...cells.map(c=>c.length*4+3))
-      if(y+height>284)next()
-      if(index%2)page!.drawRectangle({x:14*MM,y:page!.getHeight()-(y+height)*MM,width:392*MM,height:height*MM,color:colour('#f4f7e9')})
-      let x=14
-      for(const [i,lines]of cells.entries()){for(const [j,line]of lines.entries())text(page!,font,line,x+2,y+4.7+j*4,2.8);x+=widths[i]}
-      rule(page!,14,y+height,406,y+height,'#d8dfcb',.12);y+=height
-    }
-  }
-  table('Outline & corner setting-out','Origin 0,0 is the top-left of the bounding box. X increases right; Y increases down. Lengths and coordinates in mm.',
-    ['Corner','X','Y','Internal angle','Next edge','Picture frame','Edge length','Distance to C-01'],
-    model.corners.map((p,i)=>[p.id,dimensionText(p.x),dimensionText(p.y),dimensionText(p.angle)+'°',model.edges[i].id,model.edges[i].framingBoard?'Included':'Omitted',dimensionText(model.edges[i].length),dimensionText(Math.hypot(p.x-model.corners[0].x,p.y-model.corners[0].y))]),[.08,.12,.12,.13,.10,.13,.15,.17])
-  if(model.cutouts.length)table('Cutout setting-out','Clear opening boundaries. Coordinates share the outside outline datum; perimeter boards and trim framing sit outside each opening.',
-    ['Opening','Name','Point','X','Y','Next segment'],
-    model.cutouts.flatMap(h=>h.points.map((p,i)=>{const b=h.points[(i+1)%h.points.length];return [h.id,h.name,String(i+1),dimensionText(p.x),dimensionText(p.y),dimensionText(Math.hypot(b.x-p.x,b.y-p.y))]})),[.10,.30,.10,.16,.16,.18])
-  table('Pedestal setting-out schedule','IDs match the pedestal CSV. Set individual heights from surveyed ground levels; surveyed positions use individual ground levels; other positions use the estimated range.',
-    ['Pedestal ID','X','Y','Base diameter','Height min','Height max','Ground level','Shared head'],
-    model.pedestals.map(p=>[p.id,dimensionText(p.x),dimensionText(p.y),dimensionText(p.diameter),dimensionText(p.heightMin),dimensionText(p.heightMax),p.groundLevel===null?'Not surveyed':dimensionText(p.groundLevel),p.shared?'Yes':'No']),[.12,.13,.13,.13,.13,.13,.12,.11])
-  if(model.centreLines.length)table('Framing centre-line setting-out','Coordinates from datum in mm. Coordinate gaps describe adjacent parallel lines; they are not a substitute for individual member span checks.',
-    ['Line ID','Function','Datum axis','Coordinate','Gap from previous line'],
-    model.centreLines.map(c=>[c.id,c.kind,c.axis,dimensionText(c.coordinate),c.spacing===null?'First line':dimensionText(c.spacing)]),[.14,.29,.15,.20,.22])
-  if(model.stockJoints.length)table('Frame stock-joint setting-out','Locate these joint centres from the same datum. Crosses on the overview indicate stock splices; connections require supplier detailing.',
-    ['Joint ID','X','Y','Detail'],model.stockJoints.map(j=>[j.id,dimensionText(j.x),dimensionText(j.y),'Frame stock splice centre']),[.16,.22,.22,.40])
-  table('Alu-Joist member setting-out','Member IDs match the aluminium cutting CSV. Coordinates locate member centre lines; face width and end bearing require product confirmation.',
-    ['Member ID','Profile / member','Start X','Start Y','End X','End Y','Length'],
-    model.members.map(m=>[m.id,m.name,dimensionText(m.a.x),dimensionText(m.a.y),dimensionText(m.b.x),dimensionText(m.b.y),dimensionText(m.length)]),[.08,.30,.124,.124,.124,.124,.124])
-  if(model.construction.projections.length)table('Calculated profile end projections','Draft geometry: distances beyond actual supporting pedestals / bearers / upper rails. Unset supplier limits are not approved allowances.',
-    ['Member','End / tier','Profile','End X','End Y','Support X','Support Y','Projection','Limit'],
-    model.construction.projections.map(q=>[q.member,`${q.end} / ${q.tier}`,String(q.size),dimensionText(q.point.x),dimensionText(q.point.y),dimensionText(q.support.x),dimensionText(q.support.y),dimensionText(q.distance),q.limit===null?'Unverified':dimensionText(q.limit)]),[.09,.15,.07,.10,.10,.10,.10,.10,.09])
-  if(model.construction.boardProjections.length)table('Decking end projections','Unverified board-supplier detail: distance from a cut end to the nearest finite bearing face, measured along the board axis.',
-    ['Board piece','End X','End Y','Projection mm','Status'],
-    model.construction.boardProjections.map(q=>[`B-${String(q.piece+1).padStart(4,'0')}`,dimensionText(q.point.x),dimensionText(q.point.y),dimensionText(q.distance),'Board supplier limit unverified']),[.16,.20,.20,.20,.24])
-  if(model.construction.connections.length)table('Connection details to confirm','These are geometric junctions, not approved connections. Confirm each member end, head, load transfer and fixing detail with the supplier.',
-    ['Connection','X','Y','Meeting members','Status'],model.construction.connections.map(q=>[q.id,dimensionText(q.point.x),dimensionText(q.point.y),q.members.join(', '),'Unverified connector/head']),[.12,.16,.16,.36,.20])
+  appendInstallationGuide(doc,font,bold,plan,s,header)
+
   const notes=doc.addPage([420*MM,297*MM]);header(notes,'Specification & installation notes')
   let noteY=45
   const paragraphs=[
     `Frame: ${model.frame}. Aluminium stock: ${model.frameStock} m. Entered bearing face: ${model.faceWidth} mm; minimum board-end bearing: ${model.bearing} mm.`,
-    `Construction: Board-driven joists, blocking and collectors. Applied minimum frame-end recess for fascia: ${dimensionText(model.construction.fasciaClearance)} mm from the outside deck outline. Picture-frame boards are included on ${model.edges.filter(e=>e.framingBoard).map(e=>e.id).join(', ')||'no outside edges'}; omitted on ${model.edges.filter(e=>!e.framingBoard).map(e=>e.id).join(', ')||'no outside edges'}.`,
+    `Construction: Board-driven joists, blocking and collectors. Applied minimum frame-end recess for fascia: ${dimensionText(model.construction.fasciaClearance)} mm from the outside deck outline. Picture-frame boards are included on ${model.edges.filter(e=>e.framingBoard).length} outside edges; omitted on ${model.edges.filter(e=>!e.framingBoard).length} outside edges.`,
     `Support arrangement: ${model.construction.supportArrangement==='same-depth-headers'?'Same-depth support headers and connected joist sections. No added bearer tier.':'Pedestal grid with local opening trims.'}` ,
     `Entered end-overhang limits: 35 mm profile - ${model.construction.joistOverhang35===null?'pending supplier value':dimensionText(model.construction.joistOverhang35)+' mm'}; 80 mm profile - ${model.construction.joistOverhang80===null?'pending supplier value':dimensionText(model.construction.joistOverhang80)+' mm'}. Confirm the applicable connection, load and end-overhang limits with the supplier.`,
     ...model.construction.verification.notes,
@@ -123,11 +87,8 @@ export async function exportInstallerPdf(plan:Plan,s:Settings,options:{now?:Date
     `Decking: ${model.boardWidth} × ${model.boardThickness} mm; ${model.boardStock} m stock; boards run across the ${model.boardDirection==='horizontal'?'physical X (width)':'physical Y (depth)'} axis.`,
     `Pedestal: ${model.pedestal}. Required adjustment range: ${dimensionText(model.height.min)}-${dimensionText(model.height.max)} mm. Average height and ground variation do not provide a surveyed height for each pedestal.`,
     `Actual maximum primary span ${dimensionText(model.primarySpan)} mm / limit ${model.primaryLimit} mm. ${model.secondaryLimit?`Actual maximum secondary span ${dimensionText(model.secondarySpan)} mm / limit ${model.secondaryLimit} mm.`:''}`,
-    `Structural source: BetterDeck Aluminium Profiles Design, ${model.source}.`,
-    'All dimensions and coordinates refer to the current model in millimetres. Dimensions are rounded to 0.1 mm; set out from the listed coordinates and verify against the site. Do not measure from a resized screen or print.',
-    `${model.pedestalCode} (n) identifies position n of ${model.pedestal}; these IDs match the pedestal CSV. M-xxxx IDs match member IDs in the Alu-Joist cutting CSV. A shared head is one bearing node and requires a supplier-approved head/connection detail.`,
-    'JCL and BCL identify actual joist and bearer centre-line coordinates. BR identifies breaker centres. FJ identifies frame stock-joint centres. X and Y coordinates share the outside-outline datum. Dense setting-out chains are listed completely in the schedules.',
-    ...(drawing.labelled?[]:['This dense overview omits pedestal callouts. Use the complete pedestal coordinate schedule to set out every base.']),
+    `Structural source: BetterDeck Aluminium Profiles Design, 1513-1 revision 2 (15 June 2021), case ${plan.frame.rule.sheet}; source PDF pages ${installerReferenceSelection(s).pages.join(', ')}.`,
+    'Drawing dimensions refer to the current model in millimetres. Verify the marked lengths and actual support locations on site. Do not measure from a resized screen or print.',
     ...model.warnings,
   ]
   let page=notes
@@ -136,7 +97,31 @@ export async function exportInstallerPdf(plan:Plan,s:Settings,options:{now?:Date
     if(noteY+lines.length*4.5+5>276){page=doc.addPage([420*MM,297*MM]);header(page,'Installation notes - continued');noteY=45}
     for(const line of lines){text(page,font,line,14,noteY,3);noteY+=4.5}noteY+=5
   }
-  const pages=doc.getPages()
-  for(const [i,page]of pages.entries()){const w=page.getWidth()/MM,h=page.getHeight()/MM;text(page,font,`${model.reference} | BetterDeck® | Site verification required`,14,h-5,2.2,PLAN_COLOURS.muted);text(page,font,`${i+1} / ${pages.length}`,w-29,h-5,2.2,PLAN_COLOURS.muted)}
+  const references=options.references??(typeof window!=='undefined'?await loadInstallerReferenceAssets(s):undefined)
+  const generatedPages=doc.getPages()
+  if(references){
+    const selection=installerReferenceSelection(s)
+    const referencePage=doc.addPage([420*MM,297*MM]);header(referencePage,'Frame illustration & relevant span report')
+    text(referencePage,bold,`${model.frame} | ${s.load} kN/m² live load | Composite decking / K Series`,14,46,3.8)
+    text(referencePage,font,`Report 1513-1 revision 2, case ${plan.frame.rule.sheet}. Included source PDF pages: ${selection.pages.join(', ')}.`,14,54,3)
+    if(selection.illustration){
+      if(!references.illustration)throw new Error('The matching frame illustration is missing.')
+      const image=await doc.embedPng(references.illustration),scale=Math.min(392*MM/image.width,194*MM/image.height),width=image.width*scale,height=image.height*scale
+      referencePage.drawImage(image,{x:(referencePage.getWidth()-width)/2,y:referencePage.getHeight()-64*MM-height,width,height})
+      text(referencePage,font,'Supplier illustration of the selected two-tier arrangement. Use the selected-load report pages for spans.',14,267,2.8)
+    }else{
+      text(referencePage,bold,'Single-layer Alu-Joist on pedestals',14,76,5)
+      text(referencePage,font,'The supplied two-tier illustrations do not match this arrangement; the guide shows your actual build-up.',14,88,3)
+      text(referencePage,font,`Maximum primary span in this plan: ${dimensionText(model.primarySpan)} mm. Selected report limit: ${model.primaryLimit} mm.`,14,102,3.4)
+      text(referencePage,font,`Joist spacing: ${s.joistSpacing} mm. Selected profile: ${plan.frame.rule.joist} mm.`,14,113,3.4)
+    }
+    text(referencePage,font,'The following pages are unchanged extracts from the supplied report. PDF page numbers are one higher than printed Sheet No.',14,276,2.7)
+    generatedPages.push(referencePage)
+    const source=await PDFDocument.load(references.spanReport)
+    if(source.getPageCount()!==67)throw new Error('The bundled span report does not match the reviewed 67-page revision.')
+    for(const page of await doc.copyPages(source,selection.pages.map(n=>n-1)))doc.addPage(page)
+  }
+  const count=doc.getPageCount()
+  for(const [i,page]of generatedPages.entries()){const w=page.getWidth()/MM,h=page.getHeight()/MM;text(page,font,`${model.reference} | BetterDeck® | Site verification required`,14,h-5,2.2,PLAN_COLOURS.muted);text(page,font,`${i+1} / ${count}`,w-29,h-5,2.2,PLAN_COLOURS.muted)}
   return doc.save()
 }

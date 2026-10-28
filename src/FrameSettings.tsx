@@ -38,7 +38,7 @@ export default function FrameSettings({settings:s,onChange,plan,prices,products,
     <ChoiceField<3|5> label="Design live load" value={s.load} options={[{value:3,label:'3 kN/m²'},{value:5,label:'5 kN/m²'}]} onChange={load=>set({load,confirmed:false,edgeDetailConfirmed:false})}/>
     
     
-    <ChoiceField<SelectionObjective> label="Automatic selection priority" value={selectionObjective(s)} options={SELECTION_OBJECTIVES.map(o=>({value:o.id,label:o.label}))} onChange={selectionObjective=>set({selectionObjective})}/>
+    <ChoiceField<SelectionObjective> label="Automatic selection priority" allowReselect={!automatic} value={selectionObjective(s)} options={SELECTION_OBJECTIVES.map(o=>({value:o.id,label:o.label}))} onChange={selectionObjective=>set({selectionObjective,frameSelection:'auto',supportLayout:undefined,edgeDetailConfirmed:false,confirmed:false})}/>
     <section className="main-frame-selection" aria-label="Alu-Joist selection">
       <ProductPicker kind="frame" settings={s} products={products} onApply={onApplyProduct} onManage={onManageProducts} onSaveCurrent={()=>onSaveProduct('frame')}/>
       <ChoiceField<'auto'|'manual'> label="Alu-Joist selection" ariaLabel="Frame selection mode" value={automatic?'auto':'manual'} options={[{value:'auto',label:'Automatic'},{value:'manual',label:'Choose manually'}]} onChange={frameSelection=>set({frameSelection,...(frameSelection==='auto'?{supportLayout:undefined}:{}),edgeDetailConfirmed:false})}/>
