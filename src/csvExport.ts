@@ -1,3 +1,4 @@
+import { fasciaBoardWidth } from './planner.ts'
 import { pedestalHeights } from './pedestalSurvey.ts'
 import { bounds, FRAME_NAMES, pieceOutline } from './planner.ts'
 import type { Plan, Point, Settings } from './planner.ts'
@@ -59,7 +60,7 @@ export function buildCsvReport(kind:CsvKind,plan:Plan,s:Settings,prices:Record<s
     const headers=quote?['Record','Item ID','Component','Quantity','Unit','Unit rate EUR','Line total EUR','Status','Notes']:['Record','Item ID','Component','Quantity','Unit','Stock length mm','Width mm','Thickness / profile height mm','Unit rate EUR','Line total EUR','Status','Notes']
     const rows:CsvCell[][]=estimate.lines.map(q=>{
       const stock=q.key==='boards'||q.key==='skirting'?mm(s.board.stock):q.key.startsWith('profile')?mm(s.frameStock):null
-      const width=q.key==='boards'?s.board.width:q.key==='skirting'?s.skirtingHeight??200:null
+      const width=q.key==='boards'?s.board.width:q.key==='skirting'?fasciaBoardWidth(s):null
       const thickness=q.key==='boards'?s.board.thickness:q.key.startsWith('profile')?Number(q.key.slice(7)):null
       const status=q.pending?'Quantity pending':q.rate===null?'Price missing':'Priced; provisional quantity'
       const base:CsvCell[]=['Item',q.key,q.name,q.pending?null:q.qty,q.unit]
@@ -89,12 +90,12 @@ export function buildCsvReport(kind:CsvKind,plan:Plan,s:Settings,prices:Record<s
     return {headers,rows}
   }
   if(kind==='skirting'){
-    const headers=['Stock fascia ID','Cut order','Piece ID','Deck edge','Stock length mm','Cut length mm','Fascia height mm','Start X mm','Start Y mm','End X mm','End Y mm','Kerf before cut mm','End offcut mm (once per stock)','Colour','Status']
+    const headers=['Stock fascia ID','Cut order','Piece ID','Deck edge','Stock length mm','Cut length mm','Fascia height mm','Start X mm','Start Y mm','End X mm','End Y mm','Kerf before cut mm','End offcut mm (once per stock)','Colour','Status','Fascia row']
     if(!s.skirting)return {headers,rows:[],unavailable:'Enable fascia in Finish to export its cutting list.'}
     const rows:CsvCell[][]=[]
     for(const [barIndex,bar] of plan.skirtBars.entries())for(const [sequence,cut] of bar.cuts.entries()){
       const p=plan.skirtPieces[cut.piece],a=physical(p.a,s),b=physical(p.b,s)
-      rows.push([id('SK-STOCK-',barIndex),sequence+1,id('SK-',cut.piece),p.edge+1,mm(s.board.stock),mm(cut.length),s.skirtingHeight??200,mm(a.x),mm(a.y),mm(b.x),mm(b.y),sequence?s.kerf:0,sequence===bar.cuts.length-1?mm(bar.remaining):null,s.board.colourName,plan.skirtingGap<0?'REVIEW: fascia extends below ground':'Provisional; confirm site clearance'])
+      rows.push([id('SK-STOCK-',barIndex),sequence+1,id('SK-',cut.piece),p.edge+1,mm(s.board.stock),mm(cut.length),fasciaBoardWidth(s),mm(a.x),mm(a.y),mm(b.x),mm(b.y),sequence?s.kerf:0,sequence===bar.cuts.length-1?mm(bar.remaining):null,s.board.colourName,plan.skirtingGap<0?'REVIEW: fascia extends below ground':'Provisional; confirm site clearance',p.row+1])
     }
     return {headers,rows}
   }

@@ -47,6 +47,18 @@ export function keepBreakersInBounds(s:Settings):Settings{
     return JSON.stringify(positions)===JSON.stringify(s.breakerPositions??[])?s:{...s,breakerPositions:positions,edgeDetailConfirmed:false}
   }catch{return s}
 }
+// Committed settings must still produce boards after a direction, outline or
+// stock change. Draft editing keeps its fixed count and uses the strict solver.
+export function ensureEnoughBreakers(s:Settings):Settings{
+  const fitted=keepBreakersInBounds(s)
+  if(fitted.joints!=='breaker'||fitted.breakerMode!=='manual'||validBreakerPlacement(fitted,fitted.breakerPositions??[]))return fitted
+  try{
+    const space=breakerSpace(fitted)
+    const automatic=boardLayout(space.local,{...fitted,breakerMode:'balanced'})
+    if(automatic.breakers.length<=(fitted.breakerPositions??[]).length)return fitted
+    return {...fitted,breakerMode:'balanced',breakerPositions:undefined,breakerCount:undefined,edgeDetailConfirmed:false}
+  }catch{return fitted}
+}
 // A draft drag must follow the pointer even when its adjacent bay exceeds
 // stock. Only the outline and neighbouring guides constrain this preview;
 // the board solver explains the invalid bay and prevents applying that draft.

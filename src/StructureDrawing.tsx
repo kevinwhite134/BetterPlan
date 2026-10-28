@@ -8,8 +8,8 @@ const BatchedStructure=memo(function BatchedStructure({plan,settings,exposure,sh
   const drawing=useMemo(()=>structurePaths(plan,settings,exposure,showSupports,rotation,tilt,project,plan.frame.pedestals.length<200?16:8),[plan,settings,exposure,showSupports,rotation,tilt,project])
   return <g className="structure-drawing overview-structure" data-pedestal-count={drawing.components.pedestals} data-member-count={drawing.components.members}>{drawing.paths.map((p,i)=><path key={i} d={p.path} fill={p.fill} data-kind={p.kind}/>)}</g>
 })
-const StructureDrawing=memo(function StructureDrawing(props:Parameters<typeof BatchedStructure>[0]){
-  const hardware=useMemo(()=>hardwareGeometry(props.plan,props.settings,props.exposure),[props.plan,props.settings,props.exposure])
+const StructureDrawing=memo(function StructureDrawing(props:Parameters<typeof BatchedStructure>[0]&{showButtMarkers?:boolean}){
+  const hardware=useMemo(()=>hardwareGeometry(props.plan,props.settings,props.exposure,props.showButtMarkers),[props.plan,props.settings,props.exposure,props.showButtMarkers])
   const visible=useMemo(()=>projectedStructure(hardware,props.rotation,props.tilt),[hardware,props.rotation,props.tilt])
   const paths=new Map<string,string[]>()
   for(const part of visible)for(const face of part.faces){const segments=paths.get(face.fill)??[];segments.push(face.points.map((p,i)=>{const q=props.project(p,part.kind,part.id);return `${i?'L':'M'}${Math.round(q.x*10000)/10000} ${Math.round(q.y*10000)/10000}`}).join('')+'Z');paths.set(face.fill,segments)}

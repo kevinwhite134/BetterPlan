@@ -1,3 +1,4 @@
+import { fasciaBoardWidth } from './planner.ts'
 import type { Plan, Point, Settings } from './planner.ts'
 import { boardRings } from './shapeGeometry.ts'
 import { BOARD_USE_NAMES, frameMemberName, pedestalReference } from './productNames.ts'
@@ -19,8 +20,8 @@ export function sceneComponent(plan:Plan,s:Settings,id:string):SceneComponent|nu
   }
   if(id.startsWith('fascia-')){
     const p=plan.skirtPieces[index];if(!p)return null
-    const bottom=boardBottom-(s.skirtingHeight??200)/1000
-    return {id,name:`Fascia piece ${index+1}`,materialKey:'skirting',dimensions:`${Math.round(p.length*1000)} × ${s.skirtingHeight??200} mm`,tier:'board',point:physical({x:(p.a.x+p.b.x)/2,y:(p.a.y+p.b.y)/2},(boardBottom+bottom)/2),rings:[[physical(p.a,boardBottom),physical(p.b,boardBottom),physical(p.b,bottom),physical(p.a,bottom)]],count:plan.skirtPieces.length}
+    const top=boardBottom-p.row*fasciaBoardWidth(s)/1000,bottom=top-fasciaBoardWidth(s)/1000
+    return {id,name:`Fascia piece ${index+1}`,materialKey:'skirting',dimensions:`${Math.round(p.length*1000)} × ${fasciaBoardWidth(s)} mm`,tier:'board',point:physical({x:(p.a.x+p.b.x)/2,y:(p.a.y+p.b.y)/2},(top+bottom)/2),rings:[[physical(p.a,top),physical(p.b,top),physical(p.b,bottom),physical(p.a,bottom)]],count:plan.skirtPieces.length}
   }
   if(id.startsWith('member-')){
     const m=plan.frame.members[index];if(!m)return null
@@ -43,7 +44,7 @@ export function pickBoard(plan:Plan,s:Settings,q:Point,project:(p:Position3,tier
   for(let i=plan.boards.pieces.length-1;i>=0;i--){const rings=boardRings(plan.boards.pieces[i]).map(r=>r.map(p=>project(physical(p),'board',`board-${i}`)));if(pointInRing(q,rings[0])&&!rings.slice(1).some(r=>pointInRing(q,r)))return `board-${i}`}
   return null
 }
-export function pickStructure(plan:Plan,s:Settings,q:Point,exposure:StructureExposure,showSupports:boolean,project:(p:Position3,tier:SceneTier,component?:string)=>Point,tolerance:number){
+export function pickStructure(plan:Plan,s:Settings,q:Point,exposure:StructureExposure,showSupports:boolean,project:(p:Position3,tier:SceneTier,component?:string)=>Point,tolerance:number,showButtMarkers=true){
   // This path also identifies parts in the batched large-project renderer.
   let best:string|null=null,nearest=tolerance
   const lineDistance=(a:Point,b:Point)=>{const dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,((q.x-a.x)*dx+(q.y-a.y)*dy)/l)):0;return Math.hypot(q.x-a.x-t*dx,q.y-a.y-t*dy)}
@@ -56,6 +57,6 @@ export function pickStructure(plan:Plan,s:Settings,q:Point,exposure:StructureExp
   })
 
   if(exposure!=='pedestals')plan.frame.members.forEach((m,i)=>{if(exposure==='bearers'&&m.kind!=='bearer')return;const tier=m.kind==='bearer'?'bearer':'joist',z=-s.board.thickness/1000-(m.kind==='bearer'?plan.frame.rule.joist/1000:0)-m.size/2000,d=lineDistance(project(physical(m.a,z),tier,`member-${i}`),project(physical(m.b,z),tier,`member-${i}`));if(d<nearest){nearest=d;best=`member-${i}`}})
-  if(exposure!=='pedestals')for(const p of hardwareGeometry(plan,s,exposure)){const point=project(p.centre,p.kind==='bearer'?'bearer':'joist',p.id),d=Math.hypot(q.x-point.x,q.y-point.y);if(d<nearest*.7){nearest=d;best=p.id}}
+  if(exposure!=='pedestals')for(const p of hardwareGeometry(plan,s,exposure,showButtMarkers)){const point=project(p.centre,p.kind==='bearer'?'bearer':'joist',p.id),d=Math.hypot(q.x-point.x,q.y-point.y);if(d<nearest*.7){nearest=d;best=p.id}}
   return best
 }

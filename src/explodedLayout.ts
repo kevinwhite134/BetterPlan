@@ -1,3 +1,4 @@
+import { fasciaBoardWidth } from './planner.ts'
 import type { Plan, Point, Settings } from './planner.ts'
 import type { Position3 } from './structureGeometry.ts'
 import type { SceneTier } from './sceneComponents.ts'
@@ -34,11 +35,10 @@ export function explodedLayout(plan:Plan,s:Settings,percentage:number){
   for(const c of frameHardware(plan.frame,s.frameFaceWidth??35).connections){
     const p=physical(c.point),u=physical(c.axis),n={x:-u.y,y:u.x},z=boardBottom-(c.tier==='bearer'?plan.frame.rule.joist/1000:0)-c.size/2000
     if(c.kind==='butt'){
-      add(`continuous-${c.id}`,{...p,z},c.tier,{x:.03,y:.03,z:c.size/2000},{x:0,y:0,z:step*.12})
       for(const side of [-1,1]){const sideDistance=side*(s.frameFaceWidth??35)/2000,away=side*(step*.13+.12*amount);add(`side-${side}-${c.id}`,{x:p.x+n.x*sideDistance,y:p.y+n.y*sideDistance,z},c.tier,{x:.04,y:.04,z:.02},{x:n.x*away,y:n.y*away,z:step*.2})}
     }else add(c.id,{...p,z:z+c.size/2000},c.tier,{x:.03,y:.03,z:.01},{x:u.x*step*.08,y:u.y*step*.08,z:step*.16})
   }
-  plan.skirtPieces.forEach((p,i)=>{const a=physical(p.a),b=physical(p.b);add(`fascia-${i}`,{x:(a.x+b.x)/2,y:(a.y+b.y)/2,z:boardBottom-(s.skirtingHeight??200)/2000},'board',{x:Math.abs(a.x-b.x)/2,y:Math.abs(a.y-b.y)/2,z:(s.skirtingHeight??200)/2000},{x:0,y:0,z:-step*.2})})
+  plan.skirtPieces.forEach((p,i)=>{const a=physical(p.a),b=physical(p.b);add(`fascia-${i}`,{x:(a.x+b.x)/2,y:(a.y+b.y)/2,z:boardBottom-(p.row+.5)*fasciaBoardWidth(s)/1000},'board',{x:Math.abs(a.x-b.x)/2,y:Math.abs(a.y-b.y)/2,z:(fasciaBoardWidth(s))/2000},{x:0,y:0,z:-step*.2})})
   if(!Number.isFinite(bounds.minX))for(const p of plan.physical){include({...p,z:0});include({...p,z:-s.height/1000})}
   return {offsets,centres,bounds,boundsByTier,levels,amount,step}
 }

@@ -1,3 +1,4 @@
+import { fasciaHeight } from './planner.ts'
 import { memo, useMemo } from 'react'
 import { bounds } from './planner'
 import type { Plan, Point, Settings } from './planner'
@@ -18,6 +19,6 @@ export const LayerThumbnail=memo(function LayerThumbnail({plan:fullPlan,settings
     <polygon points={coordinates(plan.p.map(p=>project(p,ground)))} fill="#dbe3d0"/>
     <StructureDrawing plan={plan} settings={s} exposure={exposure} showSupports={true} rotation={35} tilt={52} project={p=>{const x=p.x-box.width/2,y=p.y-box.depth/2;return {x:x*Math.cos(angle)-y*Math.sin(angle),y:(x*Math.sin(angle)+y*Math.cos(angle))*Math.cos(t)-p.z*Math.sin(t)}}}/>
     {showBoards?plan.boards.pieces.map((piece,i)=><path key={i} d={ringPath(boardRings(piece).map(r=>r.map(p=>project(p))))} fillRule="evenodd" fill={s.board.colour} stroke="#5f4f38" strokeWidth=".01"/>):null}
-    {exposure==='finished'&&s.skirting?plan.p.map((a,i)=>{const b=plan.p[(i+1)%plan.p.length],u=project(a),v=project(b);if(v.x<u.x)return null;return <polygon key={i} points={coordinates([project(a,boardBottom),project(b,boardBottom),project(b,boardBottom-(s.skirtingHeight??200)/1000),project(a,boardBottom-(s.skirtingHeight??200)/1000)])} fill={s.board.colour} stroke="#5f4f38" strokeWidth=".01"/>}):null}
+    {exposure==='finished'&&s.skirting?plan.p.map((a,i)=>{const b=plan.p[(i+1)%plan.p.length],u=project(a),v=project(b);if(v.x<u.x)return null;return <polygon key={i} points={coordinates([project(a,boardBottom),project(b,boardBottom),project(b,boardBottom-fasciaHeight(s)/1000),project(a,boardBottom-fasciaHeight(s)/1000)])} fill={s.board.colour} stroke="#5f4f38" strokeWidth=".01"/>}):null}
   </svg>
 })

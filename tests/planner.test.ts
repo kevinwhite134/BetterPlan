@@ -204,7 +204,7 @@ test('physically incompatible direct pedestals produce an explicit unresolved la
   assert.equal(p.frame.layoutStatus,'unbuildable');assert.equal(p.frame.pedestals.length,0);assert.equal(p.frame.members.length,0);assert.ok(p.frame.issues.some(i=>i.includes('bearer + joist')))
 })
 test('full-height skirting is a separate material and an over-tall product is flagged',()=>{
-  const a=planDeck(settings()),b=planDeck(settings({skirting:true,skirtingHeight:200})),c=planDeck(settings({skirting:true,skirtingHeight:300}))
+  const a=planDeck(settings({skirting:false})),b=planDeck(settings({skirting:true,skirtingHeight:200,skirtingRows:1})),c=planDeck(settings({skirting:true,skirtingHeight:300,skirtingRows:1}))
   assert.ok(!a.materials.some(m=>m.key==='skirting'));assert.ok(b.materials.some(m=>m.key==='skirting'&&m.qty>0));close(b.skirtingGap,25)
   assert.ok(c.skirtingGap<0);assert.ok(c.warnings.some(w=>w.includes('below the ground')))
 })

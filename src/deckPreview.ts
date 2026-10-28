@@ -1,3 +1,4 @@
+import { fasciaHeight } from './planner.ts'
 import { pedestalHeight, surveyReadings } from './pedestalSurvey.ts'
 import { boardRings, ringPath } from './shapeGeometry.ts'
 import { bounds } from './planner.ts'
@@ -13,7 +14,7 @@ export function deckPreviewSvg(plan:Plan,s:Settings):string{
   const project=(p:Point,z=0)=>{const q=physical(p),x=q.x-box.width/2,y=q.y-box.depth/2;return {x:x*Math.cos(angle)-y*Math.sin(angle),y:(x*Math.sin(angle)+y*Math.cos(angle))*Math.cos(tilt)-z*Math.sin(tilt)}}
   const coordinates=(p:Point[],z=0)=>p.map(q=>project(q,z)).map(q=>`${q.x.toFixed(4)},${q.y.toFixed(4)}`).join(' ')
   const ground=-s.height/1000,boardBottom=-s.board.thickness/1000,head=-(s.board.thickness+plan.frame.rule.joist+plan.frame.rule.bearer)/1000
-  const skirtBottom=boardBottom-(s.skirtingHeight??200)/1000,lowest=Math.min(ground-.03,s.skirting?skirtBottom:boardBottom)
+  const skirtBottom=boardBottom-fasciaHeight(s)/1000,lowest=Math.min(ground-.03,s.skirting?skirtBottom:boardBottom)
   const projected=plan.p.flatMap(q=>[project(q),project(q,lowest)]),pad=Math.max(box.width,box.depth)*.045
   const minX=Math.min(...projected.map(q=>q.x))-pad,minY=Math.min(...projected.map(q=>q.y))-pad,maxX=Math.max(...projected.map(q=>q.x))+pad,maxY=Math.max(...projected.map(q=>q.y))+pad
   const shade=(factor:number)=>'#'+[1,3,5].map(i=>Math.round(parseInt(s.board.colour.slice(i,i+2),16)*factor).toString(16).padStart(2,'0')).join('')

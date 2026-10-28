@@ -31,7 +31,7 @@ export type Settings = {
   perimeterEdges?:boolean[]; pictureFrameRows?:1|2;
   frameLayout?:'continuous'|'open'; fasciaClearance?:number; joistOverhang35?:number; joistOverhang80?:number;
   breakerWidth?: 'auto'|'single'|'double'; selectionObjective?:'cost'|'simple'|'pedestals'|'spread';
-  perimeterJoints?: boolean; skirting?: boolean; skirtingHeight?: number;
+  perimeterJoints?: boolean; skirting?: boolean; skirtingHeight?: number; skirtingRows?: number;
   pedestalDiameter?: number; pedestalClearance?: number; edgeDetailConfirmed?: boolean;
   frameFaceWidth?: number; boardEndBearing?: number; allowRipping?: boolean; frameSelection?: 'auto'|'manual'; pedestalSelection?: 'auto'|'manual';
   supportLayout?: {version:1;members:Member[];pedestals:Point[];outlineKey?:string;boardLayout?:{key:string;phase:number;perimeterJointShift:number;breakers?:number[]}};
@@ -44,8 +44,11 @@ export const DEFAULT_BOARD: BoardProfile = { id: 'default', name: 'Custom compos
 export const DEFAULT_SETTINGS: Settings = {
   polygon: [{x:0,y:0},{x:6,y:0},{x:6,y:3.238},{x:0,y:3.238}], direction:'horizontal', joints:'breaker', board: DEFAULT_BOARD,
   frame:'big-small', frameSelection:'auto', pedestalSelection:'auto', load:3, height:250, variation:20, pedestalMin:35, pedestalMax:250,
-  pedestalName:'Custom adjustable pedestal', joistSpacing:400, kerf:3, frameStock:3.66, confirmed:false, allowRipping:true, breakerWidth:'auto', selectionObjective:'cost',
+  pedestalName:'Custom adjustable pedestal', joistSpacing:400, kerf:3, frameStock:3.66, confirmed:false, skirting:true, allowRipping:true, breakerWidth:'auto', selectionObjective:'cost',
 }
+export const fasciaBoardWidth = (s:Settings) => s.skirtingHeight??s.board.width
+export const fasciaRowCount = (s:Settings) => s.skirtingRows??Math.max(1,Math.ceil((s.height-s.board.thickness)/fasciaBoardWidth(s)))
+export const fasciaHeight = (s:Settings) => fasciaBoardWidth(s)*fasciaRowCount(s)
 export const FRAME_NAMES: Record<Frame, string> = { small:'35 mm Alu-Joist', 'small-small':'35 mm Alu-Joist bearer + 35 mm joist', big:'80 mm Alu-Joist', 'big-small':'80 mm Alu-Joist bearer + 35 mm joist' }
 export function isBoardProfile(value: unknown): value is BoardProfile {
   return !boardProfileError(value)
@@ -429,6 +432,7 @@ export function validateSettings(s: Settings) {
   if(s.selectionObjective!==undefined&&!['cost','simple','pedestals','spread'].includes(s.selectionObjective))return 'Invalid automatic frame selection objective.'
   if(s.breakerPositions!==undefined&&(!Array.isArray(s.breakerPositions)||s.breakerPositions.length>100||s.breakerPositions.some(x=>typeof x!=='number'||!Number.isFinite(x))))return 'Breaker positions must be a list of up to 100 finite distances.'
   if(typeof s.board.name!=='string'||typeof s.board.id!=='string'||typeof s.board.colourName!=='string'||!/^#[0-9a-f]{6}$/i.test(s.board.colour)||typeof s.pedestalName!=='string'||typeof s.confirmed!=='boolean') return 'Invalid board profile or pedestal data.'
+  if(s.skirtingRows!==undefined&&(!Number.isInteger(s.skirtingRows)||s.skirtingRows<1||s.skirtingRows>100))return 'Fascia board rows must be a whole number between 1 and 100.'
   for(const key of ['perimeterJoints','skirting','edgeDetailConfirmed','allowRipping'] as const)if(s[key]!==undefined&&typeof s[key]!=='boolean')return 'Invalid perimeter, fascia or edge confirmation setting.'
   const error=polygonError(s.polygon);if(error) return error
   if(s.cutouts!==undefined){
@@ -449,7 +453,7 @@ export function validateSettings(s: Settings) {
     [s.board.endGap,1,20,'End gap must be between 1 and 20 mm.'],[s.joistSpacing,100,1500,'Joist centres must be between 100 and 1,500 mm.'],
     [s.height,30,2000,'Build-up height must be between 30 and 2,000 mm.'],[s.variation,0,1000,'Ground variation must be between 0 and 1,000 mm.'],
     [s.pedestalMin,1,2000,'Enter a valid pedestal minimum height.'],[s.pedestalMax,1,3000,'Enter a valid pedestal maximum height.'],
-    [s.pedestalDiameter??150,50,600,'Pedestal base diameter must be between 50 and 600 mm.'],[s.pedestalClearance??0,0,300,'Pedestal edge clearance must be between 0 and 300 mm.'],[s.skirtingHeight??200,25,1000,'Fascia board height must be between 25 and 1,000 mm.'],
+    [s.pedestalDiameter??150,50,600,'Pedestal base diameter must be between 50 and 600 mm.'],[s.pedestalClearance??0,0,300,'Pedestal edge clearance must be between 0 and 300 mm.'],[fasciaBoardWidth(s),25,1000,'Fascia board height must be between 25 and 1,000 mm.'],
     [s.frameFaceWidth??35,10,200,'Frame bearing face width must be between 10 and 200 mm.'],[s.boardEndBearing??10,1,80,'Required board end bearing must be between 1 and 80 mm.'],
     [s.kerf,0,10,'Saw kerf must be between 0 and 10 mm.'],[s.frameStock,.5,15,'Frame stock length must be between 0.5 and 15 m.'],
   ]
@@ -554,11 +558,11 @@ export function planDeck(s: Settings) {
   if(boards.fit.edgeGap>.01)warnings.push(`Full-width boards leave ${Math.round(boards.fit.edgeGap*1000)} mm extra clearance at each outside infill row. Adjust the outline or board width; no straight full-length rip is used.`)
   if(frame.splices.length) warnings.push('Frame stock joints sit on real bearings; their splice connections still require supplier detailing.')
   if(boards.fit.localGap)warnings.push('Some internal corners fall through a full-width row. Allow straight rip cuts to fill these regions, or adjust those dimensions.')
-  const skirtingHeight=s.skirtingHeight??200,skirtingGap=s.height-s.board.thickness-skirtingHeight
-  const skirtPieces=s.skirting?p.flatMap((a,i)=>{const b=p[(i+1)%p.length],l=distance(a,b),at=(t:number)=>({x:a.x+(b.x-a.x)*t/l,y:a.y+(b.y-a.y)*t/l});return splitRun(0,l,s.board.stock,s.board.endGap/1000).map(([start,end])=>({edge:i,length:end-start,a:at(start),b:at(end)}))}):[]
+  const skirtingHeight=fasciaBoardWidth(s),skirtingRows=fasciaRowCount(s),skirtingGap=s.height-s.board.thickness-fasciaHeight(s)
+  const skirtPieces=s.skirting?p.flatMap((a,i)=>{const b=p[(i+1)%p.length],l=distance(a,b),at=(t:number)=>({x:a.x+(b.x-a.x)*t/l,y:a.y+(b.y-a.y)*t/l});return Array.from({length:skirtingRows},(_,row)=>splitRun(0,l,s.board.stock,s.board.endGap/1000).map(([start,end])=>({edge:i,row,length:end-start,a:at(start),b:at(end)}))).flat()}):[]
   const skirtBars=packCuts(skirtPieces.map(q=>q.length),s.board.stock,s.kerf/1000)
   if(s.skirting)warnings.push('Fascia edge loads, wind exposure, ventilation, fixings and bracing require supplier/site verification.')
-  if(s.skirting&&skirtingGap<0)warnings.push('The selected full-height fascia board extends below the ground. Select a shorter product; the planner does not rip it down.')
+  if(s.skirting&&skirtingGap<0)warnings.push('The selected fascia rows extend below the ground. Reduce the row count or board width; the planner does not rip fascia down.')
   const clips=Math.ceil(boards.pieces.reduce((sum,p)=>sum+Math.ceil(p.length/(s.joistSpacing/1000))+1,0))
   const hardware=frameHardware(frame,s.frameFaceWidth??35)
   const hardwareNote=frame.geometryPass?'Derived from actual same-tier aluminium member ends.':'UNRESOLVED: connector quantities are pending support geometry.'
@@ -569,7 +573,7 @@ export function planDeck(s: Settings) {
     {key:'continuousJoiners',name:'Continuous joiner',qty:hardware.continuousJoiners,unit:'units',note:`One at each aluminium butt joint; 2 mm visual gap. ${hardwareNote}`},
     {key:'joistJoiners',name:'Joist joiner',qty:hardware.joistJoiners,unit:'units',note:`Two per butt joint, one on each side, for joists and bearers. ${hardwareNote}`},
     {key:'perpendicularJoiners',name:'Perpendicular joist joiner',qty:hardware.perpendicularJoiners,unit:'units',note:`One per same-tier perpendicular end connection, including ladder blocking; no physical gap. ${hardwareNote}`},
-    ...(s.skirting?[{key:'skirting',name:`Fascia board · ${skirtingHeight} mm × ${s.board.stock} m`,qty:skirtBars.length,unit:'boards',note:`${perimeter.toFixed(2)} m perimeter; separate fascia product, no height ripping.`}]:[]),
+    ...(s.skirting?[{key:'skirting',name:`Fascia board · ${skirtingHeight} mm × ${s.board.stock} m`,qty:skirtBars.length,unit:'boards',note:`${perimeter.toFixed(2)} m perimeter × ${skirtingRows} rows; ${fasciaHeight(s)} mm total height, no height ripping.`}]:[]),
     {key:'clips',name:'Decking fixing positions',qty:clips,unit:'positions',note:'Allowance only. Clip type, shared clips, starter clips and screws need a product fixing schedule.'},
   ]
   return {p,physical,cutouts,holes,boards,frame,area,perimeter,used,purchased,offcut,blankArea,footprint,range,heightFits,warnings,materials,frameCuts,framePieces,clips,skirtingGap,skirtBars,skirtPieces}

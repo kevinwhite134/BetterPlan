@@ -1,3 +1,4 @@
+import { fasciaBoardWidth } from './planner.ts'
 import { frameRule } from './planner.ts'
 import type { Settings } from './planner.ts'
 import { PEDESTAL_MODELS } from './productNames.ts'
@@ -40,7 +41,7 @@ export function defaultPricing(s:Settings){
     profile35:money(34.72/1.23/3*s.frameStock),
     profile80:money(34.72/1.23/3*1.2*s.frameStock),
     pedestals:money(pedestal.net+extra),
-    skirting:money(65/(3.66*.184)*s.board.stock*(s.skirtingHeight??200)/1000),
+    skirting:money(65/(3.66*.184)*s.board.stock*(fasciaBoardWidth(s))/1000),
     clips:money(15.04/25),
   }
   const basis:PriceBasis[]=[

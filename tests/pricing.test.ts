@@ -9,7 +9,7 @@ import { createDeckWorkbook } from '../src/workbookExport.ts'
 
 test('default stock rates use net euro prices per purchased item, not gross or per-metre amounts',()=>{
   const {rates}=defaultPricing(DEFAULT_SETTINGS)
-  assert.deepEqual(rates,{boards:'35.51',profile35:'34.44',profile80:'41.33',pedestals:'11.21',skirting:'70.65',clips:'0.60',continuousJoiners:'1.68',joistJoiners:'1.20',perpendicularJoiners:'1.20'})
+  assert.deepEqual(rates,{boards:'35.51',profile35:'34.44',profile80:'41.33',pedestals:'11.21',skirting:'48.04',clips:'0.60',continuousJoiners:'1.68',joistJoiners:'1.20',perpendicularJoiners:'1.20'})
 })
 
 test('published pedestal models use their own single-unit rate with Dutch VAT removed',()=>{
@@ -42,7 +42,7 @@ test('manual rates including zero and a cleared rate remain authoritative and ar
 })
 
 test('automatic rates reconcile between the materials table, CSV and linked Excel quote',()=>{
-  const s=DEFAULT_SETTINGS,plan=planDeck(s),rates=resolvedPricing(s,{})
+  const s={...DEFAULT_SETTINGS,skirting:false},plan=planDeck(s),rates=resolvedPricing(s,{})
   const estimate=materialEstimate(plan,rates),csv=buildCsvReport('quote',plan,s,rates),wb=createDeckWorkbook(plan,s,rates)
   assert.equal(estimate.complete,true)
   assert.equal(csv.rows.find(r=>r[0]==='Summary')![6],estimate.subtotalCents/100)

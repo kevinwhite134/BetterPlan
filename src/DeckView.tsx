@@ -1,3 +1,4 @@
+import { fasciaHeight } from './planner.ts'
 import DeckScene from './DeckScene'
 import { LayerThumbnail } from './DeckLayerThumbnail'
 import OpenIcon from './OpenIcon'
@@ -9,7 +10,7 @@ import { bounds } from './planner'
 import { boardRings, ringPath } from './shapeGeometry'
 import { signedArea } from './deckGeometry'
 import StructureDrawing from './StructureDrawing'
-import DeckLabels from './DeckLabels'
+import { DeckLabelKey } from './DeckLabels'
 import { BOARD_USE_NAMES, frameMemberName, pedestalReference } from './productNames'
 import { installerPlan, installerSvg } from './installerPlan'
 import { isLargePreview } from './renderOverview'
@@ -46,7 +47,7 @@ function PlanDeckView({plan,settings:s,layer,showSupports,measurements=false}: {
   const poly=(p:Point[],z=0)=>coordinates(layer==='3d'?p.map(q=>project(q,z)):p.map(physical))
   const surface=(ring:Point[],z=0)=>ringPath([ring,...plan.holes].map(r=>r.map(p=>layer==='3d'?project(p,z):physical(p))))
   const ground=-s.height/1000,boardBottom=-s.board.thickness/1000
-  const projected=plan.p.flatMap(q=>[project(q),project(q,Math.min(ground,s.skirting?boardBottom-(s.skirtingHeight??200)/1000:ground))]),xs=projected.map(q=>q.x),ys=projected.map(q=>q.y),pad=labels?Math.max(.8,box.width*.16):.5,minX=Math.min(...xs)-pad,minY=Math.min(...ys)-pad
+  const projected=plan.p.flatMap(q=>[project(q),project(q,Math.min(ground,s.skirting?boardBottom-fasciaHeight(s)/1000:ground))]),xs=projected.map(q=>q.x),ys=projected.map(q=>q.y),pad=labels?Math.max(.8,box.width*.16):.5,minX=Math.min(...xs)-pad,minY=Math.min(...ys)-pad
   const sceneView={x:minX,y:minY,w:Math.max(...xs)-minX+pad,h:Math.max(...ys)-minY+pad}
   const view=layer==='3d'?`${sceneView.x} ${sceneView.y} ${sceneView.w} ${sceneView.h}`:rotatedViewBox(-.45,-.45,box.width+.9,box.depth+.9,planRotation)
   const sign=signedArea(plan.physical)>0?1:-1
@@ -88,7 +89,7 @@ function PlanDeckView({plan,settings:s,layer,showSupports,measurements=false}: {
         <path d={surface(plan.p,ground-.015)} fillRule="evenodd" fill="#344b37" opacity=".12"/>
         <StructureDrawing plan={plan} settings={s} exposure={exposed} showSupports={visibleSupports} rotation={rotation} tilt={tilt} project={projectStructure}/>
         {showBoards?fronts.map(({a,b},i)=><polygon key={i} points={coordinates([project(a),project(b),project(b,boardBottom),project(a,boardBottom)])} fill={s.board.colour} stroke="#5b4635" strokeWidth=".005"/>):null}
-        {exposed==='finished'&&s.skirting?fronts.map(({a,b},i)=>{const bottom=boardBottom-(s.skirtingHeight??200)/1000;return <g key={i}><polygon points={coordinates([project(a,boardBottom),project(b,boardBottom),project(b,bottom),project(a,bottom)])} fill={s.board.colour} stroke="#554330" strokeWidth=".008"/><polyline points={coordinates([project(a,boardBottom-.025),project(b,boardBottom-.025)])} stroke="#fff" strokeOpacity=".12" strokeWidth=".006"/></g>}):null}
+        {exposed==='finished'&&s.skirting?fronts.map(({a,b},i)=>{const bottom=boardBottom-fasciaHeight(s)/1000;return <g key={i}><polygon points={coordinates([project(a,boardBottom),project(b,boardBottom),project(b,bottom),project(a,bottom)])} fill={s.board.colour} stroke="#554330" strokeWidth=".008"/><polyline points={coordinates([project(a,boardBottom-.025),project(b,boardBottom-.025)])} stroke="#fff" strokeOpacity=".12" strokeWidth=".006"/></g>}):null}
       </>:<rect x="-.45" y="-.45" width={box.width+.9} height={box.depth+.9} fill={`url(#${id}-grid)`}/>}
       {layer!=='3d'||showBoards?<path d={surface(plan.p)} fillRule="evenodd" fill={layer==='frame'?'#f6f7ef':'#534a3c'} stroke="#71816a" strokeWidth=".009"/>:<polygon points={poly(plan.p,ground)} fill="none" stroke="#91a180" strokeDasharray=".05 .04" strokeWidth=".006"/>}
       {layer==='frame'?<>
@@ -108,10 +109,11 @@ function PlanDeckView({plan,settings:s,layer,showSupports,measurements=false}: {
         {large?boardPaths.map(p=><path key={p.kind} d={p.path} fillRule="evenodd" fill={`url(#${id}-grain)`} stroke={p.kind==='perimeter'?'#59452f':'#40362b'} strokeOpacity={p.kind==='perimeter'?.65:.3} strokeWidth={p.kind==='perimeter'?.006:.002} data-board-count={p.count}><title>{p.count} actual {p.kind} pieces · complete cutting list available in Review</title></path>):plan.boards.pieces.map((p,i)=><path key={i} d={ringPath(boardRings(p).map(r=>r.map(q=>layer==='3d'?project(q):physical(q))))} fillRule="evenodd" fill={`url(#${id}-grain)`} stroke={p.kind==='perimeter'?'#59452f':'#40362b'} strokeOpacity={p.kind==='perimeter'?.65:.3} strokeWidth={p.kind==='perimeter'?.006:.002}><title>{BOARD_USE_NAMES[p.kind??'infill']} {i+1} · {p.length.toFixed(3)} m × {Math.round(p.width*1000)} mm finished width{p.localRip?' · local rip / notch':''} · {s.board.width} mm stock · angled / tapered cuts allowed</title></path>)}
       </>:null}
       {layer!=='3d'?<g fill="#617155" textAnchor="middle" fontSize=".11"><text x={box.width/2} y="-.18">{box.width.toFixed(3)} m</text><text transform={`translate(-.18 ${box.depth/2}) rotate(-90)`}>{box.depth.toFixed(3)} m</text></g>:null}
-    </g>{layer==='3d'&&labels?<DeckLabels plan={plan} s={s} exposure={exposed} showSupports={visibleSupports} project={projectStructure} view={sceneView}/>:null}</svg>
+    </g></svg>
     </>}
     {layer==='3d'?<aside className="layer-rail" aria-label="Expose deck layers"><span className="layer-rail-title">EXPLORE LAYERS</span>{layers.map(item=><button type="button" key={item.id} className={`layer-card ${exposed===item.id?'selected':''}`} aria-pressed={exposed===item.id} aria-label={`Show ${item.label.toLowerCase()}`} title={item.description+(large?' · simplified thumbnail; main view includes every component':'')} onClick={()=>{setExposure(item.id);if(['joists','bearers','pedestals'].includes(item.id)&&tilt<45)setTilt(58)}}><span className="layer-card-picture"><LayerThumbnail plan={plan} settings={s} exposure={item.id}/></span><span className="layer-card-label">{item.label}<span aria-hidden="true">{exposed===item.id?'●':<OpenIcon/>}</span></span></button>)}</aside>:null}
     </div>
+    {layer==='3d'&&labels?<DeckLabelKey plan={plan} s={s} exposure={exposed} showSupports={visibleSupports}/>:null}
     {layer==='3d'?<>
       <div className="orbit-toolbar"><p id={`${id}-orbit-help`}>Drag the deck to rotate and tilt. <span>Arrow keys also move the view; Home resets it.</span></p><div className="orbit-buttons" role="group" aria-label="3D camera controls"><button type="button" aria-label="Rotate view left" onClick={()=>setRotation(value=>wrapRotation(value-15))}>↶</button><button type="button" aria-label="Rotate view right" onClick={()=>setRotation(value=>wrapRotation(value+15))}>↷</button><button type="button" aria-label="Tilt view up" onClick={()=>setTilt(value=>clampTilt(value+5))}>↑</button><button type="button" aria-label="Tilt view down" onClick={()=>setTilt(value=>clampTilt(value-5))}>↓</button><button type="button" onClick={resetCamera}>Reset view</button></div></div>
       <div className="exposure-caption"><span role="status">{activeLayer.description}</span><label className="part-label-toggle"><input type="checkbox" checked={labels} onChange={e=>setLabels(e.target.checked)}/>Label one of each component</label><span className="colour-chip"><i style={{background:s.board.colour}}/>{s.board.colourName}</span></div>

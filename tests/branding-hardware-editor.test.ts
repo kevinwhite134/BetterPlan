@@ -59,6 +59,28 @@ test('pedestal adjusting columns measure 110 mm in the detailed 3D geometry',()=
   close(Math.max(...stem.points.map(p=>p.x))-Math.min(...stem.points.map(p=>p.x)),.110)
 })
 
+test('butt marks are flat top lines and disappear from exploded hardware while real joiners remain',()=>{
+  for(const direction of ['horizontal','vertical'] as const){
+    const s={...DEFAULT_SETTINGS,direction},base=planDeck(s),p={...base,frame:{...base.frame,rule:{...base.frame.rule,bearer:80},members:[member(0,0,2,0),member(2,0,4,0),member(0,1,2,1,'bearer'),member(2,1,4,1,'bearer')]}}
+    const before=JSON.stringify(p)
+    for(const exposure of ['joists','bearers'] as const){
+      const assembled=hardwareGeometry(p,s,exposure),marks=assembled.filter(part=>part.id.startsWith('continuous-')),exploded=hardwareGeometry(p,s,exposure,false)
+      assert.equal(marks.length,exposure==='bearers'?1:2)
+      for(const mark of marks){
+        assert.equal(mark.faces.length,1,'No vertical faces')
+        assert.deepEqual(mark.faces[0].normal,{x:0,y:0,z:1})
+        assert.ok(mark.faces[0].points.every(point=>point.z===mark.centre.z),'All points lie on the top plane')
+        const xs=mark.faces[0].points.map(point=>point.x),ys=mark.faces[0].points.map(point=>point.y)
+        const spans=[Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys)].sort((a,b)=>a-b)
+        close(spans[0],ALUMINIUM_BUTT_GAP);close(spans[1],(s.frameFaceWidth??35)/1000)
+      }
+      assert.ok(!exploded.some(part=>part.id.startsWith('continuous-')))
+      assert.deepEqual(exploded,assembled.filter(part=>!part.id.startsWith('continuous-')),'Real connector products remain unchanged')
+    }
+    assert.equal(JSON.stringify(p),before,'Rendering does not change the plan or quantities')
+  }
+})
+
 test('joist centres accept 1500 mm and reject values above the new limit',()=>{
   assert.equal(validateSettings({...DEFAULT_SETTINGS,joistSpacing:1500}),'')
   assert.match(validateSettings({...DEFAULT_SETTINGS,joistSpacing:1501}),/1,500/)

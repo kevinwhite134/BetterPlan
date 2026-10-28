@@ -23,7 +23,7 @@ test('individual board, member and joiner products separate within their tiers',
   for(const c of frameHardware(p.frame).connections.filter(c=>c.kind==='butt')){
     const left=full.offsets.get(`side--1-${c.id}`)!,right=full.offsets.get(`side-1-${c.id}`)!
     assert.ok(Math.hypot(left.x-right.x,left.y-right.y)>.4,'paired joiners visibly separate from each other')
-    assert.ok(full.offsets.has(`continuous-${c.id}`))
+    assert.ok(!full.offsets.has(`continuous-${c.id}`),'Butt-gap markers are not exploded products')
   }
 })
 test('every rendered pedestal stays assembled throughout explosion in both board directions',()=>{
@@ -81,6 +81,7 @@ test('exploded labels identify products with one label for the complete pedestal
   assert.equal(pedestals.length,1)
   assert.equal(pedestals[0].id,'pedestal-0')
   assert.equal(pedestals[0].name,DEFAULT_SETTINGS.pedestalName)
+  assert.ok(!labels.some(l=>l.id.startsWith('continuous-')),'Hidden butt-gap markers have no exploded label')
   assert.equal(new Set(labels.map(l=>l.id)).size,labels.length)
   for(const label of labels)assert.deepEqual(label.point,layout.centres.get(label.id))
 })

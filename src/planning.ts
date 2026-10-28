@@ -1,6 +1,6 @@
 import { bounds, planDeck, polygonArea } from './planner.ts'
 import type { Plan, Settings } from './planner.ts'
-import { keepBreakersInBounds } from './breakerPlacement.ts'
+import { ensureEnoughBreakers, keepBreakersInBounds } from './breakerPlacement.ts'
 import { recommendFrames, resolveFrameRecommendation, selectionObjective } from './frameRecommendation.ts'
 import type { FrameRecommendation } from './frameRecommendation.ts'
 
@@ -22,6 +22,7 @@ export function pendingRecommendation(s:Settings):FrameRecommendation{
 export function computeDeckPlanning(input:Settings,prices:Record<string,string>):PlanningResult{
   let settings:Settings={...input,perimeterJoints:true,allowRipping:true}
   try{
+    settings=ensureEnoughBreakers(settings)
     // One comparison supplies both automatic selection and the support cards.
     // Do not repeat the entire catalogue search after applying its choice.
     const recommendation=recommendFrames(settings,prices)

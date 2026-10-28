@@ -23,7 +23,7 @@ test('header render includes real board pieces and fits concave decks in either 
 
 test('header render follows changes to the deck colour, board direction and skirting',()=>{
   const svg=deckPreviewSvg(planDeck(DEFAULT_SETTINGS),DEFAULT_SETTINGS)
-  for(const s of [{...DEFAULT_SETTINGS,direction:'vertical' as const},{...DEFAULT_SETTINGS,skirting:true},{...DEFAULT_SETTINGS,board:{...DEFAULT_SETTINGS.board,colour:'#333333'}}])assert.notEqual(deckPreviewSvg(planDeck(s),s),svg)
+  for(const s of [{...DEFAULT_SETTINGS,direction:'vertical' as const},{...DEFAULT_SETTINGS,skirting:false},{...DEFAULT_SETTINGS,board:{...DEFAULT_SETTINGS.board,colour:'#333333'}}])assert.notEqual(deckPreviewSvg(planDeck(s),s),svg)
 })
 
 test('Excel embeds one shared preview in the quote and material headers without moving the cutting tables',async()=>{

@@ -1,3 +1,4 @@
+import { fasciaBoardWidth, fasciaRowCount, fasciaHeight } from './planner'
 import OpenIcon from './OpenIcon'
 import type { Plan, Settings } from './planner'
 import { ChoiceField, Field } from './SettingControls'
@@ -33,6 +34,12 @@ export function FinishSettings({settings:s,onChange,plan}: {settings:Settings;on
     <Field label="Deck colour"><input aria-label="Deck finish colour" type="color" value={s.board.colour} onInput={e=>onChange({...s,board:{...s.board,colour:e.currentTarget.value,id:'custom'}})} onChange={e=>onChange({...s,board:{...s.board,colour:e.target.value,id:'custom'}})}/></Field>
     <Field label="Finish name"><input value={s.board.colourName} onChange={e=>onChange({...s,board:{...s.board,colourName:e.target.value,id:'custom'}})}/></Field>
     <ChoiceField label="Perimeter fascia" value={!!s.skirting} options={[{value:false,label:'Without fascia'},{value:true,label:'With fascia'}]} onChange={skirting=>onChange({...s,skirting})}/>
-    {s.skirting?<><Field label="Fascia board height" unit="mm" hint="Actual fascia height, without ripping."><input type="number" min="25" max="1000" value={Number.isFinite(s.skirtingHeight??200)?s.skirtingHeight??200:''} onChange={e=>onChange({...s,skirtingHeight:e.target.value===''?NaN:+e.target.value})}/></Field>{plan?<div className={`height-result ${plan.skirtingGap<0?'mismatch':''}`}><span>Clearance below fascia</span><strong>{Math.round(plan.skirtingGap)} <small>mm</small></strong><span>{plan.skirtingGap<0?'Product extends below ground: choose a shorter height.':'Based on average build-up height; check ground variation on site.'}</span></div>:null}<p className="field-note">Uses board stock length and finish. Check fixings, ventilation and ground levels.</p></>:null}
+    {s.skirting?<>
+      <Field label="Fascia board width" unit="mm" hint={`Defaults to the ${s.board.width} mm decking board width. Boards stack vertically without ripping.`}><input type="number" min="25" max="1000" value={Number.isFinite(fasciaBoardWidth(s))?fasciaBoardWidth(s):''} onChange={e=>onChange({...s,skirtingHeight:e.target.value===''?undefined:+e.target.value})}/></Field>
+      <ChoiceField label="Fascia board count" value={s.skirtingRows===undefined} options={[{value:true,label:'Automatic'},{value:false,label:'Manual'}]} onChange={auto=>onChange({...s,skirtingRows:auto?undefined:fasciaRowCount(s)})}/>
+      {s.skirtingRows!==undefined?<Field label="Fascia board rows" hint="Boards stacked on each perimeter edge."><input type="number" min="1" max="100" step="1" value={Number.isFinite(s.skirtingRows)?s.skirtingRows:''} onChange={e=>onChange({...s,skirtingRows:e.target.value===''?NaN:+e.target.value})}/></Field>:null}
+      {plan?<><p className="field-note">{fasciaRowCount(s)} boards high × {fasciaBoardWidth(s)} mm = {fasciaHeight(s)} mm fascia. {plan.skirtBars.length} stock boards needed around the perimeter.</p><div className={`height-result ${plan.skirtingGap<0?'mismatch':''}`}><span>Clearance below fascia</span><strong>{Math.round(plan.skirtingGap)} <small>mm</small></strong><span>{plan.skirtingGap<0?'Full boards extend below ground. Reduce the manual count or choose a narrower board.':'Based on average build-up height; check ground variation on site.'}</span></div></>:null}
+      <p className="field-note">Automatic count rounds up the height below the decking divided by the board width. Uses board stock length and finish. Check fixings, ventilation and ground levels.</p>
+    </>:null}
     </>
 }

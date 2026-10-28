@@ -2,7 +2,7 @@ import { useId } from 'react'
 
 export default function MeasurementDiagram({label}:{label:string}){
   const id=useId().replaceAll(':',''),name=label.toLowerCase()
-  const kind=/angle|outgoing bearing|next edge bearing/.test(name)?'angle':/variation/.test(name)?'variation':/diameter|edge clearance/.test(name)?'base':/fascia board height/.test(name)?'fascia':/build-up|adjustment/.test(name)?'height':/bearing|top-face|recess/.test(name)?'bearing':/centres/.test(name)?'centres':/thickness/.test(name)?'thickness':/width|depth|length|gap|kerf|position|coordinate/.test(name)?'plan':null
+  const kind=/angle|outgoing bearing|next edge bearing/.test(name)?'angle':/variation/.test(name)?'variation':/diameter|edge clearance/.test(name)?'base':/fascia board (height|width)/.test(name)?'fascia':/build-up|adjustment/.test(name)?'height':/bearing|top-face|recess/.test(name)?'bearing':/centres/.test(name)?'centres':/thickness/.test(name)?'thickness':/width|depth|length|gap|kerf|position|coordinate/.test(name)?'plan':null
   if(!kind)return null
   const arrow=`url(#${id})`,vertical=/depth|thickness/.test(name),gap=/gap|kerf/.test(name)
   return <svg className="measurement-diagram" viewBox="0 0 260 145" role="img" aria-label={`${label}: illustrated measurement`}>
