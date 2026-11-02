@@ -20,11 +20,13 @@ test('all eight frame/load cases select only the matching K Series calculation p
   }
 })
 
-test('PDF drawing omits entry IDs without changing the measured screen drawing',()=>{
+test('both measured drawings omit entry IDs by default while opt-in IDs remain available',()=>{
   const s=DEFAULT_SETTINGS,p=planDeck(s),model=installerPlan(p,s)
   const clean=installerDrawing(model,392,189,3,false).marks.filter(m=>m.type==='text').map(m=>m.text).join(' ')
   assert.doesNotMatch(clean,/C-\d|E\d\d|FJ-|BR-|VJ-|CP \(/)
-  const measured=installerDrawing(model).marks.filter(m=>m.type==='text').map(m=>m.text).join(' ')
+  const screen=installerDrawing(model).marks.filter(m=>m.type==='text').map(m=>m.text).join(' ')
+  assert.doesNotMatch(screen,/C-\d|E\d\d|FJ-|BR-|VJ-|CP \(/)
+  const measured=installerDrawing(model,420,205,3,true).marks.filter(m=>m.type==='text').map(m=>m.text).join(' ')
   assert.match(measured,/C-01/)
   assert.doesNotMatch(installationGuide(p,s).steps.map(s=>s.body).join(' '),/M-xxxx|FJ-xxx|C-xx|E-xx|BR centres|coordinate schedule/)
 })
@@ -54,8 +56,8 @@ test('PDF appends unchanged source pages and the correct illustration',async()=>
     const s={...DEFAULT_SETTINGS,frame},plan=planDeck(s),selected=installerReferenceSelection(s)
     const pdf=await PDFDocument.load(await exportInstallerPdf(plan,s,{references:{spanReport,illustration:illustration(selected.illustration!)}}))
     const offset=pdf.getPageCount()-selected.pages.length
-    // The concise guide is followed by paginated real pedestal-span measurements.
-    assert.equal(offset,6+Math.ceil(installerPlan(plan,s).pedestalSpans.length/27))
+    // Measured plan, coloured 3D view, concise guide and supplier illustration; no coordinate-table pages.
+    assert.equal(offset,7)
     for(const [i,page] of selected.pages.entries())assert.deepEqual(streams(pdf,offset+i),streams(source,page-1))
   }
 })

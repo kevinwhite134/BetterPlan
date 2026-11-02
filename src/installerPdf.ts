@@ -7,6 +7,7 @@ import { pdfBrand } from './pdfBrand.ts'
 import { appendInstallationGuide } from './installationGuidePdf.ts'
 import { installerReferenceSelection, loadInstallerReferenceAssets } from './installerReferences.ts'
 import type { InstallerReferenceAssets } from './installerReferences.ts'
+import { appendSupportPdfPage } from './supportPdf.ts'
 
 const MM=72/25.4
 const colour=(hex:string)=>rgb(parseInt(hex.slice(1,3),16)/255,parseInt(hex.slice(3,5),16)/255,parseInt(hex.slice(5,7),16)/255)
@@ -32,7 +33,7 @@ function drawScene(page:PDFPage,font:PDFFont,d:InstallerDrawing,offsetX:number,o
     if(m.type==='circle'){page.drawCircle({x:(offsetX+m.at.x)*MM,y:H-(offsetY+m.at.y)*MM,size:m.radius*MM,borderWidth:(m.ink.width??.2)*MM,borderColor:colour(m.ink.colour),...(m.fill?{color:colour(m.fill)}:{})});continue}
     const value=printable(m.text),size=m.size*MM,w=font.widthOfTextAtSize(value,size),theta=-(m.angle??0)*Math.PI/180
     const cx=(offsetX+m.at.x)*MM,cy=H-(offsetY+m.at.y)*MM,half=m.align==='center'?w/2:0
-    if(m.background&&!m.angle)page.drawRectangle({x:cx-half-.5*MM,y:cy-size*.7,width:w+MM,height:size*1.4,color:rgb(1,1,1)})
+    if(m.background){const bx=-half-.5*MM,by=-size*.7;page.drawRectangle({x:cx+Math.cos(theta)*bx-Math.sin(theta)*by,y:cy+Math.sin(theta)*bx+Math.cos(theta)*by,width:w+MM,height:size*1.4,rotate:degrees(-(m.angle??0)),color:rgb(1,1,1)})}
     page.drawText(value,{x:cx-Math.cos(theta)*half+Math.sin(theta)*size*.35,y:cy-Math.sin(theta)*half-Math.cos(theta)*size*.35,font,size,color:colour(m.colour),rotate:degrees(-(m.angle??0))})
   }
 }
@@ -63,7 +64,7 @@ export async function exportInstallerPdf(plan:Plan,s:Settings,options:{now?:Date
   const legendX=W>300?145:105
   text(cover,font,'Green: joists / rim / noggins   Purple: bearers',legendX,y,2.5)
   text(cover,font,'Circles: actual pedestal bases   Crosses: stock splices',legendX,y+5,2.5)
-  text(cover,font,`${model.pedestals.length} actual pedestal positions shown`,legendX,y+10,2.3)
+  text(cover,font,`${model.pedestals.length} pedestals / Support dimensions c/c in mm; repeated intervals shown once`,legendX,y+10,2.3)
   rule(cover,14,y+12,W-14,y+12,'#d8dfcb')
   const left=14,right=W>300?W*.54:W*.53
   for(const [i,line] of [`Board-driven frame / ${model.frame}`,`Area ${model.area.toFixed(2)} m² | Load ${model.load} kN/m² | Joist centres max ${model.joistCentres} mm`,`Finished deck ${model.finishedHeight} mm | Ground variation ±${model.variation} mm`].entries())text(cover,i===0?bold:font,line,left,y+19+i*5,W>300?2.8:2.4)
@@ -73,6 +74,7 @@ export async function exportInstallerPdf(plan:Plan,s:Settings,options:{now?:Date
   text(cover,bold,model.heightFits?'FOR SITE VERIFICATION':'PEDESTAL HEIGHT RANGE NEEDS REVIEW',14,H-17,2.6,model.heightFits?'#626c2c':'#9c4e31')
   text(cover,font,'Verify dimensions on site. Supplier design of connections, perimeter framing and product compatibility is still required.',14,H-12,2.25)
 
+  await appendSupportPdfPage(doc,plan,s,{now,logo:options.logo,diagramColours:true})
   appendInstallationGuide(doc,font,bold,plan,s,header)
 
   const notes=doc.addPage([420*MM,297*MM]);header(notes,'Specification & installation notes')
@@ -96,18 +98,6 @@ export async function exportInstallerPdf(plan:Plan,s:Settings,options:{now?:Date
     const lines=wrap(font,paragraph,3,390)
     if(noteY+lines.length*4.5+5>276){page=doc.addPage([420*MM,297*MM]);header(page,'Installation notes - continued');noteY=45}
     for(const line of lines){text(page,font,line,14,noteY,3);noteY+=4.5}noteY+=5
-  }
-  for(let start=0;start<model.pedestalSpans.length;start+=27){
-    const page=doc.addPage([420*MM,297*MM]);header(page,'Pedestal centre-to-centre spans')
-    text(page,font,'Consecutive supports on actual primary members. Physical X / Y coordinates and spans in mm. Verify on site.',14,46,3)
-    for(const [x,label] of [[14,'From X / Y (mm)'],[150,'To X / Y (mm)'],[290,'Span c/c (mm)']] as const)text(page,bold,label,x,57,3)
-    for(const [i,span] of model.pedestalSpans.slice(start,start+27).entries()){
-      const y=67+i*7.5
-      text(page,font,`${dimensionText(span.a.x)} / ${dimensionText(span.a.y)}`,14,y,3)
-      text(page,font,`${dimensionText(span.b.x)} / ${dimensionText(span.b.y)}`,150,y,3)
-      text(page,bold,dimensionText(span.length),290,y,3)
-      rule(page,14,y+2.5,406,y+2.5,'#d8dfcb',.1)
-    }
   }
   const references=options.includeReferences===false?undefined:options.references??(typeof window!=='undefined'?await loadInstallerReferenceAssets(s):undefined)
   const generatedPages=doc.getPages()

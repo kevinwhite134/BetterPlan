@@ -101,7 +101,7 @@ test('pedestal spans use actual member neighbours, diagonals and unique shared p
   for(const direction of ['horizontal','vertical'] as const){const s={...settings,direction},p=planDeck(s),model=installerPlan(p,s);assert.ok(model.pedestalSpans.length>0);for(const span of model.pedestalSpans){assert.ok(Math.abs(span.length-Math.hypot(span.b.x-span.a.x,span.b.y-span.a.y))<1e-6);assert.ok(model.pedestals.some(p=>p.id===span.from&&Math.hypot(p.x-span.a.x,p.y-span.a.y)<1e-6))}}
 })
 
-test('3D support PDFs use actual assembled components, shared role colours and finite fitted bounds',async()=>{
+test('3D support PDFs use actual assembled components, silver metal and finite fitted bounds',async()=>{
   for(const frame of ['small','big-small'] as const)for(const direction of ['horizontal','vertical'] as const){
     const s={...settings,frame,direction},p=planDeck(s),scene=supportPdfScene(p,s)
     assert.equal(scene.members,p.frame.members.length);assert.equal(scene.pedestals,p.frame.pedestals.length)
@@ -110,7 +110,7 @@ test('3D support PDFs use actual assembled components, shared role colours and f
     assert.equal(scene.faces.some(f=>f.fill===FRAME_FACE_COLOURS.bearer[0]),frame==='big-small')
     const pdf=await PDFDocument.load(await exportSupportPdf(p,s));assert.equal(pdf.getPageCount(),1);assert.ok(pdf.getTitle()?.includes('3D support'))
     const parts=structureGeometry(p,s,'joists',true),paths=structurePaths(p,s,'joists',true,35,52,q=>q)
-    assert.ok(parts.filter(p=>p.kind==='joist').every(p=>p.faces[0].fill===FRAME_FACE_COLOURS.joist[0]))
+    assert.ok(parts.filter(p=>p.kind!=='pedestal').every(p=>p.faces.every(f=>Object.values(FRAME_FACE_COLOURS).flat().includes(f.fill))))
     assert.ok(paths.paths.some(p=>p.fill===FRAME_FACE_COLOURS.joist[0]))
   }
   await assert.rejects(()=>exportSupportPdf(planDeck({...settings,frameFaceWidth:10}),settings),/Resolve support geometry/)

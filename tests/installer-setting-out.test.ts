@@ -41,7 +41,7 @@ test('centre-line and joint schedules locate actual framing with physical datum 
     }
     const text=installerDrawing(m).marks.filter(mark=>mark.type==='text').map(mark=>mark.text)
     assert.ok(text.some(t=>t.includes('J c/c')))
-    if(m.centreLines.some(c=>c.kind==='Breaker centre line'))assert.ok(text.some(t=>t.includes('BR-01')))
+    if(m.centreLines.some(c=>c.kind==='Breaker centre line'))assert.ok(text.some(t=>t.includes('Breaker')))
   }
 })
 

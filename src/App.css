@@ -334,4 +334,4 @@
   .stage-frame .selected-system-facts>div{flex-wrap:wrap}
 }
 
-.quotation-totals{margin:16px 0;padding:14px;background:#f2f5e3;border-radius:5px}.quotation-totals>div{display:flex;justify-content:space-between;gap:18px;padding:7px 0;font-size:12px}.quotation-totals dd{margin:0;white-space:nowrap}.quotation-totals>div:last-child{border-top:1px solid #ccd3c3;font-weight:600;margin-top:6px;padding-top:12px}.pedestal-spans{padding:16px 22px}.pedestal-spans table{width:100%;border-collapse:collapse;font-size:11px}.pedestal-spans th,.pedestal-spans td{padding:8px;text-align:left;border-bottom:1px solid #dce1d2;white-space:nowrap}.pedestal-spans .table-scroll{max-height:360px}
+.quotation-totals{margin:16px 0;padding:14px;background:#f2f5e3;border-radius:5px}.quotation-totals>div{display:flex;justify-content:space-between;gap:18px;padding:7px 0;font-size:12px}.quotation-totals dd{margin:0;white-space:nowrap}.quotation-totals>div:last-child{border-top:1px solid #ccd3c3;font-weight:600;margin-top:6px;padding-top:12px}

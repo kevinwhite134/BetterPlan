@@ -3,13 +3,14 @@ import type { Plan, Point, Settings } from './planner.ts'
 import { frameMemberName, pedestalReference } from './productNames.ts'
 import { frameHardware, PEDESTAL_COLUMN_DIAMETER, renderedMember } from './frameHardware.ts'
 import { FRAME_FACE_COLOURS as colours } from './frameColours.ts'
+import type { FrameFaceColours } from './frameColours.ts'
 
 export type Position3=Point&{z:number}
 export type StructureExposure='finished'|'boards'|'joists'|'bearers'|'pedestals'
 export type StructureFace={points:Position3[];normal:Position3;fill:string}
 export type StructurePart={id:string;label:string;kind:'pedestal'|'bearer'|'joist';centre:Position3;faces:StructureFace[]}
 
-export function structureGeometry(plan:Plan,s:Settings,exposure:StructureExposure,showSupports:boolean):StructurePart[]{
+export function structureGeometry(plan:Plan,s:Settings,exposure:StructureExposure,showSupports:boolean,palette:FrameFaceColours=colours):StructurePart[]{
   const parts:StructurePart[]=[],boardBottom=-s.board.thickness/1000,head=boardBottom-(plan.frame.rule.joist+plan.frame.rule.bearer)/1000
   const physical=(p:Point):Point=>s.direction==='vertical'?{x:p.y,y:p.x}:p
   const solid=(points:Point[],top:number,bottom:number,topFill:string,sideFill:string):StructureFace[]=>{
@@ -32,7 +33,7 @@ export function structureGeometry(plan:Plan,s:Settings,exposure:StructureExposur
     const a=physical(member.a),b=physical(member.b),length=Math.hypot(b.x-a.x,b.y-a.y);if(length<1e-9)return
     const half=(s.frameFaceWidth??35)/2000,nx=-(b.y-a.y)/length*half,ny=(b.x-a.x)/length*half
     const top=boardBottom-(member.kind==='bearer'?plan.frame.rule.joist/1000:0),bottom=top-member.size/1000
-    const outline=[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},{x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}],colour=colours[member.kind]
+    const outline=[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},{x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}],colour=palette[member.kind]
     const centre=physical({x:(original.a.x+original.b.x)/2,y:(original.a.y+original.b.y)/2})
     parts.push({id:`member-${i}`,kind:member.kind==='bearer'?'bearer':'joist',label:`${frameMemberName(member.size,member.kind,member.role)} · ${Math.round(Math.hypot(original.b.x-original.a.x,original.b.y-original.a.y)*1000)} mm long · ${s.frameFaceWidth??35} mm top face`,centre:{...centre,z:(top+bottom)/2},faces:solid(outline,top,bottom,colour[0],colour[1])})
   })

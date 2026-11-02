@@ -1,4 +1,3 @@
-import { FRAME_FACE_COLOURS } from '../src/frameColours.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import clipping from 'polygon-clipping'
@@ -88,18 +87,18 @@ test('cutout positions use the same physical datum in project CSV, measured draw
   for(const direction of ['horizontal','vertical'] as const){
     const s={...base,direction},p=planDeck(s),model=installerPlan(p,s),svg=installerSvg(model),csv=buildCsvReport('project',p,s,{})
     assert.deepEqual(model.cutouts[0].points,rectangle.polygon.map(q=>({x:q.x*1000,y:q.y*1000})))
-    assert.ok(svg.includes('H-01'));assert.ok(svg.includes('1000 x 1000'))
-    assert.ok(installerDrawing(model).marks.some(m=>m.type==='text'&&m.text==='H-01'))
+    assert.ok(!svg.includes('H-01'));assert.ok(svg.includes(rectangle.name));assert.ok(svg.includes('1000 x 1000'))
+    assert.ok(installerDrawing(model).marks.some(m=>m.type==='text'&&m.text===rectangle.name))
     assert.ok(csv.rows.some(r=>r[0]==='Cutout'&&r[1]==='H1 point 1 X'&&r[2]===1000))
     assert.ok(deckPreviewSvg(p,s).includes('fill-rule="evenodd"'))
     const translated={...s,polygon:s.polygon.map(q=>({x:q.x-2,y:q.y-3})),cutouts:s.cutouts!.map(h=>({...h,polygon:h.polygon.map(q=>({x:q.x-2,y:q.y-3}))}))}
     assert.deepEqual(planDeck(translated).holes,p.holes)
   }
 })
-test('3D role colours apply only to metal parts; pedestal materials and geometry are retained',()=>{
+test('3D aluminium retains its silver finish and pedestal materials are unchanged',()=>{
   const p=planDeck(base),parts=structureGeometry(p,base,'joists',true)
   for(const part of parts){
     if(part.kind==='pedestal'){assert.ok(part.faces.some(f=>f.fill==='#303c32'));continue}
-    for(const face of part.faces)assert.ok((FRAME_FACE_COLOURS[part.kind] as readonly string[]).includes(face.fill),'shared role shading')
+    for(const face of part.faces){const channels=[1,3,5].map(i=>parseInt(face.fill.slice(i,i+2),16));assert.ok(Math.max(...channels)-Math.min(...channels)<25,'neutral silver metal shading')}
   }
 })

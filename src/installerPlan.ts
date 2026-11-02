@@ -51,22 +51,28 @@ export type Ink={colour:string;width?:number;dash?:boolean}
 export type PlanMark=
   |{type:'line';a:Point;b:Point;ink:Ink}
   |{type:'circle';at:Point;radius:number;ink:Ink;fill?:string}
-  |{type:'text';at:Point;text:string;size:number;colour:string;angle?:number;align?:'left'|'center';background?:boolean}
+  |{type:'text';at:Point;text:string;size:number;colour:string;angle?:number;align?:'left'|'center';background?:boolean;pedestalSpan?:InstallerPlan['pedestalSpans'][number]}
 export const PLAN_COLOURS={ink:'#303728',muted:'#7c8473',...FRAME_COLOURS,dimension:'#505c42',paper:'#ffffff'}
 
 // Paper coordinates in mm. A shared scene drives both the SVG and vector PDF.
-export function installerDrawing(model:InstallerPlan,width=420,height=205,font=3,showIds=true){
+export function installerDrawing(model:InstallerPlan,width=420,height=205,font=3,showIds=false){
   const margin=font>=4?25:20,scale=Math.max(model.width/(width-2*margin),model.depth/(height-2*margin))
   const printScale=[5,10,20,25,50,75,100,125,150,200,250,500].find(s=>s>=scale)??Math.ceil(scale/100)*100
   const x=(width-model.width/printScale)/2,y=(height-model.depth/printScale)/2
   const project=(p:Point)=>({x:x+p.x/printScale,y:y+p.y/printScale})
   const marks:PlanMark[]=[],occupied:{x:number;y:number;w:number;h:number}[]=[]
+  for(const p of model.pedestals){const q=project(p),radius=p.diameter/printScale/2;occupied.push({x:q.x-radius,y:q.y-radius,w:radius*2,h:radius*2})}
   const line=(a:Point,b:Point,colour=PLAN_COLOURS.dimension,thickness=.22,dash=false)=>marks.push({type:'line',a,b,ink:{colour,width:thickness,dash}})
-  const label=(at:Point,text:string,size=font,angle=0)=>{
-    marks.push({type:'text',at,text,size,colour:PLAN_COLOURS.ink,angle,align:'center',background:true})
-    if(!angle)occupied.push({x:at.x-text.length*size*.28,y:at.y-size*.7,w:text.length*size*.56,h:size*1.5})
+  const labelBox=(at:Point,text:string,size:number,angle=0)=>{
+    const theta=angle*Math.PI/180,w=Math.abs(Math.cos(theta))*text.length*size*.56+Math.abs(Math.sin(theta))*size*1.5,h=Math.abs(Math.sin(theta))*text.length*size*.56+Math.abs(Math.cos(theta))*size*1.5
+    return {x:at.x-w/2,y:at.y-h/2,w,h}
   }
-  const dim=(a:Point,b:Point,offset:number,text:string,size=font)=>{
+  const free=(box:{x:number;y:number;w:number;h:number})=>box.x>=1&&box.y>=1&&box.x+box.w<=width-1&&box.y+box.h<=height-1&&!occupied.some(r=>box.x<r.x+r.w+.4&&box.x+box.w+.4>r.x&&box.y<r.y+r.h+.4&&box.y+box.h+.4>r.y)
+  const label=(at:Point,text:string,size=font,angle=0,pedestalSpan?:InstallerPlan['pedestalSpans'][number])=>{
+    marks.push({type:'text',at,text,size,colour:PLAN_COLOURS.ink,angle,align:'center',background:true,...(pedestalSpan?{pedestalSpan}:{})})
+    occupied.push(labelBox(at,text,size,angle))
+  }
+  const dim=(a:Point,b:Point,offset:number,text:string,size=font,pedestalSpan?:InstallerPlan['pedestalSpans'][number])=>{
     const l=Math.hypot(b.x-a.x,b.y-a.y);if(l<1e-8)return
     const normal={x:(b.y-a.y)/l,y:-(b.x-a.x)/l},u={x:a.x+normal.x*offset,y:a.y+normal.y*offset},v={x:b.x+normal.x*offset,y:b.y+normal.y*offset}
     line(a,{x:u.x+normal.x*1.5,y:u.y+normal.y*1.5},PLAN_COLOURS.muted,.13)
@@ -74,15 +80,15 @@ export function installerDrawing(model:InstallerPlan,width=420,height=205,font=3
     line(u,v)
     for(const p of [u,v])line({x:p.x-1,y:p.y-1},{x:p.x+1,y:p.y+1},PLAN_COLOURS.dimension,.25)
     let angle=Math.atan2(v.y-u.y,v.x-u.x)*180/Math.PI;if(angle>90)angle-=180;if(angle< -90)angle+=180
-    label({x:(u.x+v.x)/2+normal.x*1.7,y:(u.y+v.y)/2+normal.y*1.7},text,size,angle)
+    label({x:(u.x+v.x)/2+normal.x*1.7,y:(u.y+v.y)/2+normal.y*1.7},text,size,angle,pedestalSpan)
   }
-  const callout=(q:Point,text:string,size:number,firstRadius:number)=>{
+  const callout=(q:Point,text:string,size:number,firstRadius:number,pedestalSpan?:InstallerPlan['pedestalSpans'][number])=>{
     const w=text.length*size*.56,h=size*1.4
     for(const radius of [firstRadius,9,13,18])for(const [dx,dy] of [[1,-1],[1,1],[-1,-1],[-1,1],[0,-1],[0,1],[1,0],[-1,0]]){
       const c={x:q.x+dx*radius,y:q.y+dy*radius},box={x:c.x-w/2,y:c.y-h/2,w,h}
       if(box.x<2||box.y<2||box.x+w>width-2||box.y+h>height-2)continue
       if(occupied.some(r=>box.x<r.x+r.w+1&&box.x+w+1>r.x&&box.y<r.y+r.h+1&&box.y+h+1>r.y))continue
-      line(q,c,PLAN_COLOURS.muted,.12);label(c,text,size);return true
+      line(q,c,PLAN_COLOURS.muted,.12);label(c,text,size,0,pedestalSpan);return true
     }
     return false
   }
@@ -103,18 +109,19 @@ export function installerDrawing(model:InstallerPlan,width=420,height=205,font=3
     label({x:centre.x,y:centre.y-font},showIds?h.id:h.name,font)
     label({x:centre.x,y:centre.y+font*.7},`${dimensionText(maxX-minX)} x ${dimensionText(maxY-minY)}`,font*.8)
   }
-  // Centre-line chains use a separate datum baseline from perimeter lengths.
-  // Dense chains are complete in the coordinate schedule instead of becoming
-  // unreadable dimension text on top of the framing.
+  // Compact numeric chains fit normal 400 mm joist / 700 mm support spacings.
+  // The legend identifies centre measurements, avoiding a repeated c/c suffix.
   for(const kind of ['Joist centre line','Bearer centre line']){
     const guides=model.centreLines.filter(c=>c.kind===kind)
-    if(guides.length<2||guides.length>24)continue
+    const size=Math.max(1.8,Math.min(2,font*.6))
+    if(guides.length<2)continue
     for(let i=1;i<guides.length;i++){
       const a=guides[i-1],b=guides[i],gap=b.coordinate-a.coordinate
-      if(gap/printScale<font*4.5)continue
+      const value=dimensionText(gap),long=`${value} ${kind==='Joist centre line'?'J':'B'} c/c`,text=gap/printScale>long.length*size*.56+1?long:value
+      if(gap/printScale<text.length*size*.56+.5)continue
       const first=a.axis==='X'?{x:a.coordinate,y:model.depth}:{x:model.width,y:a.coordinate}
       const second=a.axis==='X'?{x:b.coordinate,y:model.depth}:{x:model.width,y:b.coordinate}
-      dim(project(first),project(second),a.axis==='X'?-14:14,`${dimensionText(gap)} ${kind==='Joist centre line'?'J':'B'} c/c`,font*.75)
+      dim(project(first),project(second),a.axis==='X'?-14:14,text,size)
     }
   }
   const breakers=model.centreLines.filter(c=>c.kind==='Breaker centre line')
@@ -122,14 +129,34 @@ export function installerDrawing(model:InstallerPlan,width=420,height=205,font=3
     const a=guide.axis==='X'?{x:guide.coordinate,y:0}:{x:0,y:guide.coordinate},b=guide.axis==='X'?{x:guide.coordinate,y:model.depth}:{x:model.width,y:guide.coordinate}
     line(project(a),project(b),'#75828a',.15,true)
   }
-  if(model.pedestals.length){
-    const top=Math.min(...model.pedestals.map(p=>p.y)),left=Math.min(...model.pedestals.map(p=>p.x))
-    const row=model.pedestals.filter(p=>Math.abs(p.y-top)<.1).sort((a,b)=>a.x-b.x)
-    const column=model.pedestals.filter(p=>Math.abs(p.x-left)<.1).sort((a,b)=>b.y-a.y)
-    for(const points of [row,column])for(let i=1;i<points.length;i++){
-      const a=points[i-1],b=points[i],length=Math.hypot(b.x-a.x,b.y-a.y)
-      if(length/printScale>font*8)dim(project(a),project(b),4,`${dimensionText(length)} c/c`)
+  // Parallel runs often repeat the same intervals. Dimension each distinct
+  // interval once, trying another real run when a label would hit an opening
+  // or another dimension. Local changes retain their own measured intervals.
+  const groups=new Map<string,InstallerPlan['pedestalSpans']>()
+  for(const span of model.pedestalSpans){
+    let {a,b}=span
+    if(b.x<a.x-.001||Math.abs(b.x-a.x)<.001&&b.y<a.y)[a,b]=[b,a]
+    const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy),ux=dx/length,uy=dy/length
+    const key=[ux.toFixed(5),uy.toFixed(5),(a.x*ux+a.y*uy).toFixed(1),(b.x*ux+b.y*uy).toFixed(1)].join(':')
+    const list=groups.get(key)??[];list.push({...span,a,b});groups.set(key,list)
+  }
+  const spanSize=Math.max(1.8,Math.min(2.2,font*.6))
+  for(const spans of groups.values()){
+    spans.sort((a,b)=>a.a.y-b.a.y||a.a.x-b.a.x)
+    let placed=false
+    for(const span of spans){
+      const a=project(span.a),b=project(span.b),length=Math.hypot(b.x-a.x,b.y-a.y),value=dimensionText(span.length)
+      if(length<value.length*spanSize*.56+1)continue
+      const normal={x:(b.y-a.y)/length,y:-(b.x-a.x)/length},radius=model.pedestals[0]?.diameter/printScale/2||1
+      let angle=Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI;if(angle>90)angle-=180;if(angle< -90)angle+=180
+      for(const offset of [radius+1.5,-radius-4.9,radius+4.5,-radius-7.9]){
+        const at={x:(a.x+b.x)/2+normal.x*(offset+1.7),y:(a.y+b.y)/2+normal.y*(offset+1.7)}
+        if(!free(labelBox(at,value,spanSize,angle)))continue
+        dim(a,b,offset,value,spanSize,span);placed=true;break
+      }
+      if(placed)break
     }
+    if(!placed){const span=spans[0],a=project(span.a),b=project(span.b);callout({x:(a.x+b.x)/2,y:(a.y+b.y)/2},`${dimensionText(span.length)} c/c`,spanSize,5,span)}
   }
   if(showIds)for(const c of model.corners){
     const q=project(c),prev=project(model.corners[(model.corners.indexOf(c)+model.corners.length-1)%model.corners.length]),next=project(model.corners[(model.corners.indexOf(c)+1)%model.corners.length])
@@ -139,7 +166,6 @@ export function installerDrawing(model:InstallerPlan,width=420,height=205,font=3
     label({x:q.x+nx/length*4.5,y:q.y+ny/length*4.5},c.id,font*.9)
   }
   for(const p of model.pedestals){const q=project(p);marks.push({type:'circle',at:q,radius:p.diameter/printScale/2,ink:{colour:PLAN_COLOURS.joist,width:.24},fill:'#f2f5e7'});marks.push({type:'circle',at:q,radius:.45,ink:{colour:PLAN_COLOURS.joist},fill:PLAN_COLOURS.joist})}
-  for(const p of model.pedestals){const q=project(p),radius=p.diameter/printScale/2;occupied.push({x:q.x-radius,y:q.y-radius,w:radius*2,h:radius*2})}
   for(const p of model.stockJoints){
     const q=project(p),r=.8,base=model.pedestals.find(b=>Math.hypot(b.x-p.x,b.y-p.y)<.1)
     line({x:q.x-r,y:q.y-r},{x:q.x+r,y:q.y+r},PLAN_COLOURS.ink,.2);line({x:q.x-r,y:q.y+r},{x:q.x+r,y:q.y-r},PLAN_COLOURS.ink,.2)
