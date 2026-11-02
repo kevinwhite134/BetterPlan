@@ -30,7 +30,6 @@ export default function FrameSettings({settings:s,onChange,plan,prices,products,
   const savedPedestal=appliedProduct(s,'pedestal')
   const changePedestal=(patch:Partial<Settings>)=>set({...patch,pedestalSelection:'manual',edgeDetailConfirmed:false,...(pedestal?{pedestalName:CUSTOM_PEDESTAL}:{})})
   const selectedFits=plan?.heightFits??fit.fits,frameDepth=rule.joist+rule.bearer
-  const confirmations=Number(!s.edgeDetailConfirmed)+Number(!s.confirmed)
   return <div className="frame-settings"><div className="section-heading"><h2>Alu-Joist settings</h2></div>
     {s.supportLayout?<div className="manual-support-note"><strong>{supportLayoutIsCurrent(s)?'Manual support layout':'Supports regenerated for this outline'}</strong><p>{supportLayoutIsCurrent(s)?'Edits are saved with this project. Choosing another frame or automatic selection regenerates its layout.':'Earlier support edits are kept with their original outline. The changed outline uses a new automatic layout.'}</p><button className="button secondary full" onClick={onEditSupports}>Edit or regenerate layout</button></div>:null}
     <div className="field-grid customer-height-inputs"><Field label="Average build-up height" unit="mm"><NumberInput value={s.height} onChange={height=>set({height})} min={30} max={2000}/></Field><Field label="Ground-level variation ±" unit="mm"><NumberInput value={s.variation} onChange={variation=>set({variation})} min={0} max={1000}/></Field></div>
@@ -80,9 +79,7 @@ export default function FrameSettings({settings:s,onChange,plan,prices,products,
         <div className="field-grid"><Field label="Frame top-face width" unit="mm"><NumberInput value={s.frameFaceWidth??35} onChange={frameFaceWidth=>set({frameFaceWidth,edgeDetailConfirmed:false})} min={10} max={200}/></Field><Field label="Required board-end bearing" unit="mm"><NumberInput value={s.boardEndBearing??10} onChange={boardEndBearing=>set({boardEndBearing,edgeDetailConfirmed:false})} min={1} max={80}/></Field></div>
         <Field label="Extra edge clearance" unit="mm"><NumberInput value={s.pedestalClearance??0} onChange={pedestalClearance=>set({pedestalClearance,edgeDetailConfirmed:false})} min={0} max={300}/></Field>
       </section>
-      <section className="support-settings-group"><h3>Product checks</h3><ChoiceField label="Connection confirmation" value={!!s.edgeDetailConfirmed} options={[{value:false,label:'Not confirmed'},{value:true,label:'Confirmed'}]} onChange={edgeDetailConfirmed=>set({edgeDetailConfirmed})}/><ChoiceField label="Board compatibility confirmation" value={s.confirmed} options={[{value:false,label:'Not confirmed'},{value:true,label:'Confirmed'}]} onChange={confirmed=>set({confirmed})}/></section>
       <details className="product-reference"><summary>Product references</summary><p><a href={PRODUCT_SOURCES.frame} target="_blank" rel="noreferrer">BetterDeck Alu-Joist system <OpenIcon/></a></p><p><a href={PRODUCT_SOURCES.pedestals} target="_blank" rel="noreferrer">BetterDeck pedestal catalogue <OpenIcon/></a></p></details>
     </details>
-    {confirmations?<p className="support-confirmation-note">{confirmations} product {confirmations===1?'check':'checks'} to confirm in Advanced settings.</p>:null}
   </div>
 }
