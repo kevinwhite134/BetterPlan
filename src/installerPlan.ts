@@ -5,6 +5,8 @@ import { interiorAngle } from './editorGeometry.ts'
 import { signedArea } from './deckGeometry.ts'
 import { frameMemberName, pedestalAbbreviation, pedestalReference } from './productNames.ts'
 import { perimeterEdgeEnabled } from './perimeterEdges.ts'
+import { FRAME_COLOURS } from './frameColours.ts'
+import { pedestalSpans } from './pedestalSpans.ts'
 
 const mm=(p:Point)=>({x:p.x*1000,y:p.y*1000})
 export const dimensionText=(n:number)=>String(Math.round(n*10)/10)
@@ -30,6 +32,7 @@ export function installerPlan(plan:Plan,s:Settings){
     width:Math.max(...corners.map(p=>p.x)),depth:Math.max(...corners.map(p=>p.y)),
     members:plan.frame.members.map((m,i)=>({id:planId('M',i),a:physical(m.a),b:physical(m.b),kind:m.kind,size:m.size,role:m.role,openingIndex:m.openingIndex,name:frameMemberName(m.size,m.kind,m.role),length:Math.hypot(m.b.x-m.a.x,m.b.y-m.a.y)*1000})),
     pedestals:plan.frame.pedestals.map((p,i)=>({id:pedestalReference(s.pedestalName,i),...physical(p),heightMin:survey.rows[i].min,heightMax:survey.rows[i].max,groundLevel:survey.rows[i].level,heightFits:survey.rows[i].fits,diameter:s.pedestalDiameter??150,shared:plan.frame.junctions.some(j=>Math.hypot(j.x-p.x,j.y-p.y)<1e-6)})),
+    pedestalSpans:pedestalSpans(plan.frame).map(span=>({from:pedestalReference(s.pedestalName,span.from),to:pedestalReference(s.pedestalName,span.to),a:physical(plan.frame.pedestals[span.from]),b:physical(plan.frame.pedestals[span.to]),length:span.length*1000})),
     pedestalCode:pedestalAbbreviation(s.pedestalName),centreLines,
     stockJoints:plan.frame.splices.map((p,i)=>({id:`FJ-${String(i+1).padStart(3,'0')}`,...physical(p)})),
     splices:plan.frame.splices.map(physical),frame:FRAME_NAMES[s.frame],area:plan.area,
@@ -49,7 +52,7 @@ export type PlanMark=
   |{type:'line';a:Point;b:Point;ink:Ink}
   |{type:'circle';at:Point;radius:number;ink:Ink;fill?:string}
   |{type:'text';at:Point;text:string;size:number;colour:string;angle?:number;align?:'left'|'center';background?:boolean}
-export const PLAN_COLOURS={ink:'#303728',muted:'#7c8473',joist:'#426c52',bearer:'#aa7b32',noggin:'#a66850',dimension:'#505c42',paper:'#ffffff'}
+export const PLAN_COLOURS={ink:'#303728',muted:'#7c8473',...FRAME_COLOURS,dimension:'#505c42',paper:'#ffffff'}
 
 // Paper coordinates in mm. A shared scene drives both the SVG and vector PDF.
 export function installerDrawing(model:InstallerPlan,width=420,height=205,font=3,showIds=true){

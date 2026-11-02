@@ -1,3 +1,4 @@
+import { FRAME_COLOURS } from './frameColours.ts'
 import { fasciaHeight } from './planner.ts'
 import { pedestalHeight, surveyReadings } from './pedestalSurvey.ts'
 import { boardRings, ringPath } from './shapeGeometry.ts'
@@ -26,7 +27,7 @@ export function deckPreviewSvg(plan:Plan,s:Settings):string{
   const parts=[polygon(coordinates(plan.p,ground-.015),'#344b37','none',0,'opacity=".08"')]
   const readings=surveyReadings(s)
   for(const p of plan.frame.pedestals){const ground=pedestalHeight(p,s,plan.frame.rule,readings).ground,a=project(p,head),b=project(p,ground),r=(s.pedestalDiameter??150)/2000;parts.push(`<ellipse cx="${b.x}" cy="${b.y}" rx="${r}" ry="${r*Math.cos(tilt)}" fill="#4d5c47"/>`,`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#4d5c47" stroke-width="${Math.min(PEDESTAL_COLUMN_DIAMETER,r*1.6)}"/>`)}
-  for(const m of plan.frame.members)parts.push(line(m.a,m.b,m.kind==='bearer'?head+m.size/2000:boardBottom-plan.frame.rule.joist/2000,m.kind==='bearer'?'#8b969f':'#b8c0c6',m.kind==='bearer'?.055:.035))
+  for(const m of plan.frame.members)parts.push(line(m.a,m.b,m.kind==='bearer'?head+m.size/2000:boardBottom-plan.frame.rule.joist/2000,FRAME_COLOURS[m.kind],m.kind==='bearer'?.055:.035))
   for(const {a,b} of fronts)parts.push(polygon(face(a,b,0,boardBottom),shade(.8)))
   // Deck tops occlude fascia on recessed edges without per-piece visibility work.
   if(s.skirting)for(const {a,b} of fronts)parts.push(polygon(face(a,b,boardBottom,skirtBottom),shade(.88)))

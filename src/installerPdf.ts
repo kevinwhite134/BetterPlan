@@ -37,7 +37,7 @@ function drawScene(page:PDFPage,font:PDFFont,d:InstallerDrawing,offsetX:number,o
   }
 }
 
-export async function exportInstallerPdf(plan:Plan,s:Settings,options:{now?:Date;logo?:Uint8Array;references?:InstallerReferenceAssets}={}){
+export async function exportInstallerPdf(plan:Plan,s:Settings,options:{now?:Date;logo?:Uint8Array;references?:InstallerReferenceAssets;includeReferences?:boolean}={}){
   if(!plan.frame.geometryPass)throw new Error('Resolve the support geometry before downloading an installer plan.')
   const model=installerPlan(plan,s),doc=await PDFDocument.create(),font=await doc.embedFont(StandardFonts.Helvetica),bold=await doc.embedFont(StandardFonts.HelveticaBold)
   const now=options.now??new Date(),date=new Intl.DateTimeFormat('en-IE',{dateStyle:'medium',timeZone:'Europe/Dublin'}).format(now)
@@ -61,7 +61,7 @@ export async function exportInstallerPdf(plan:Plan,s:Settings,options:{now?:Date
   rule(cover,14,y+6,14+barWidth,y+6,PLAN_COLOURS.ink,.5);rule(cover,14,y+4.5,14,y+7.5);rule(cover,14+barWidth,y+4.5,14+barWidth,y+7.5)
   text(cover,font,dimensionText(bar)+' mm',14+barWidth+3,y+7,2.5)
   const legendX=W>300?145:105
-  text(cover,font,'Green: Alu-Joists / rim   Ochre: bearers   Brown: noggins',legendX,y,2.5)
+  text(cover,font,'Green: joists / rim / noggins   Purple: bearers',legendX,y,2.5)
   text(cover,font,'Circles: actual pedestal bases   Crosses: stock splices',legendX,y+5,2.5)
   text(cover,font,`${model.pedestals.length} actual pedestal positions shown`,legendX,y+10,2.3)
   rule(cover,14,y+12,W-14,y+12,'#d8dfcb')
@@ -97,7 +97,19 @@ export async function exportInstallerPdf(plan:Plan,s:Settings,options:{now?:Date
     if(noteY+lines.length*4.5+5>276){page=doc.addPage([420*MM,297*MM]);header(page,'Installation notes - continued');noteY=45}
     for(const line of lines){text(page,font,line,14,noteY,3);noteY+=4.5}noteY+=5
   }
-  const references=options.references??(typeof window!=='undefined'?await loadInstallerReferenceAssets(s):undefined)
+  for(let start=0;start<model.pedestalSpans.length;start+=27){
+    const page=doc.addPage([420*MM,297*MM]);header(page,'Pedestal centre-to-centre spans')
+    text(page,font,'Consecutive supports on actual primary members. Physical X / Y coordinates and spans in mm. Verify on site.',14,46,3)
+    for(const [x,label] of [[14,'From X / Y (mm)'],[150,'To X / Y (mm)'],[290,'Span c/c (mm)']] as const)text(page,bold,label,x,57,3)
+    for(const [i,span] of model.pedestalSpans.slice(start,start+27).entries()){
+      const y=67+i*7.5
+      text(page,font,`${dimensionText(span.a.x)} / ${dimensionText(span.a.y)}`,14,y,3)
+      text(page,font,`${dimensionText(span.b.x)} / ${dimensionText(span.b.y)}`,150,y,3)
+      text(page,bold,dimensionText(span.length),290,y,3)
+      rule(page,14,y+2.5,406,y+2.5,'#d8dfcb',.1)
+    }
+  }
+  const references=options.includeReferences===false?undefined:options.references??(typeof window!=='undefined'?await loadInstallerReferenceAssets(s):undefined)
   const generatedPages=doc.getPages()
   if(references){
     const selection=installerReferenceSelection(s)

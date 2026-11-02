@@ -1,3 +1,4 @@
+import { FRAME_COLOURS } from './frameColours.ts'
 import { fasciaBoardWidth, fasciaHeight, fasciaRowCount } from './planner.ts'
 import type { Plan, Settings } from './planner.ts'
 import { installerPlan, dimensionText } from './installerPlan.ts'
@@ -40,8 +41,8 @@ export function installationGuide(plan:Plan,s:Settings){
   steps.push({title:'Check and hand over the finished deck',body:`Check the ${s.height} mm finished datum, board alignment, gaps, all scheduled support positions and secure connections. Recheck ${model.cutouts.length?'opening trims, ':''}${plan.boards.breakers.length?'breaker supports, ':''}${s.skirting?'fascia clearance, ':''}perimeter details and drainage before handover. Record any site changes and regenerate the plan if member positions, products or dimensions change.`,check:'Keep this reference, cutting schedules, product instructions and site checks together for the installer and owner.',sources:['S3']})
   return {model,steps,review,surveyed,sources:INSTALLATION_SOURCES,stack:[
     {name:'Decking',height:s.board.thickness,colour:s.board.colour},
-    {name:'Alu-Joist',height:rule.joist,colour:'#8b9c9d'},
-    ...(rule.bearer?[{name:'Bearer',height:rule.bearer,colour:'#b49a68'}]:[]),
+    {name:'Alu-Joist',height:rule.joist,colour:FRAME_COLOURS.joist},
+    ...(rule.bearer?[{name:'Bearer',height:rule.bearer,colour:FRAME_COLOURS.bearer}]:[]),
   ]}
 }
 export type InstallationGuide=ReturnType<typeof installationGuide>

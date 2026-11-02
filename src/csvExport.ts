@@ -1,3 +1,4 @@
+import { quotationEstimate, quotationSummary, QUOTATION_EXCLUSIONS } from './quotationEstimate.ts'
 import { fasciaBoardWidth } from './planner.ts'
 import { pedestalHeights } from './pedestalSurvey.ts'
 import { bounds, FRAME_NAMES, pieceOutline } from './planner.ts'
@@ -13,7 +14,7 @@ export type CsvKind='materials'|'quote'|'boards'|'frame'|'skirting'|'pedestals'|
 export type CsvReport={headers:string[];rows:CsvCell[][];unavailable?:string}
 export const CSV_REPORTS:{id:CsvKind;label:string;description:string}[]=[
   {id:'materials',label:'Materials & pricing',description:'Purchase quantities, stock sizes, entered rates and material subtotals. Missing quantities and prices stay pending.'},
-  {id:'quote',label:'Materials quote',description:'A concise materials estimate with entered prices. Labour, delivery, VAT and unlisted hardware are excluded.'},
+  {id:'quote',label:'Materials quote',description:'A provisional quotation with entered delivery and VAT, where specified.'},
   {id:'boards',label:'Decking board cutting list',description:'Every infill, perimeter and breaker piece, grouped by stock board, with finished sizes, cut shapes and offcuts.'},
   {id:'frame',label:'Alu-Joist cutting list',description:'35 / 80 mm Alu-Joist K Series profile cuts, stock allocation and member positions. Available once support geometry passes.'},
   {id:'skirting',label:'Fascia cutting list',description:'Separate fascia stock, edge positions and cutting lengths. Available when fascia is enabled.'},
@@ -67,7 +68,8 @@ export function buildCsvReport(kind:CsvKind,plan:Plan,s:Settings,prices:Record<s
       return [...base,...(quote?[]:[stock,width,thickness]),q.rate,q.cents===null?null:q.cents/100,status,q.note]
     })
     const summary:CsvCell[]=['Summary','',estimate.complete?'Entered materials total':'Known priced subtotal',null,'']
-    rows.push([...summary,...(quote?[]:[null,null,null]),null,estimate.priced?estimate.subtotalCents/100:null,estimate.complete?'All material rates entered':estimate.pending?'INCOMPLETE: quantities pending':'INCOMPLETE: prices missing',exclusions])
+    rows.push([...summary,...(quote?[]:[null,null,null]),null,estimate.priced?estimate.subtotalCents/100:null,estimate.complete?'All material rates entered':estimate.pending?'INCOMPLETE: quantities pending':'INCOMPLETE: prices missing',quote?QUOTATION_EXCLUSIONS:exclusions])
+    if(quote){const quotation=quotationEstimate(plan,s,prices);for(const row of quotationSummary(quotation).slice(1))rows.push(['Summary','',row.label,null,'',null,row.cents===null?null:row.cents/100,quotation.complete?(quotation.vatRate===null?'VAT rate required':'Provisional'):'INCOMPLETE',QUOTATION_EXCLUSIONS])}
     rows.push(['Status','','Project review',null,'',...(quote?[]:[null,null,null]),null,null,supportStatus(plan),`${plan.heightFits?'Pedestal height range fits.':'Pedestal height range needs correction.'} ${!plan.boards.fit.needsAdjustment?'':'Infill fit needs review. '}${s.skirting&&plan.skirtingGap<0?'Fascia extends below ground. ':''}Board compatibility: ${s.confirmed?'recorded':'unconfirmed'}. Edge detail: ${s.edgeDetailConfirmed?'recorded':'unconfirmed'}. Applied fascia recess: ${mm(plan.frame.fasciaClearance)} mm; maximum metal projection: ${mm(Math.max(0,...plan.frame.projections.map(q=>q.distance)))} mm. Supplier projection limits and connector capacities require verification.`])
     return {headers,rows}
   }

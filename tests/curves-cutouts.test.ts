@@ -1,3 +1,4 @@
+import { FRAME_FACE_COLOURS } from '../src/frameColours.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import clipping from 'polygon-clipping'
@@ -95,10 +96,10 @@ test('cutout positions use the same physical datum in project CSV, measured draw
     assert.deepEqual(planDeck(translated).holes,p.holes)
   }
 })
-test('3D aluminium colours apply only to metal parts; pedestal materials and geometry are retained',()=>{
+test('3D role colours apply only to metal parts; pedestal materials and geometry are retained',()=>{
   const p=planDeck(base),parts=structureGeometry(p,base,'joists',true)
   for(const part of parts){
     if(part.kind==='pedestal'){assert.ok(part.faces.some(f=>f.fill==='#303c32'));continue}
-    for(const face of part.faces){const channels=[1,3,5].map(i=>parseInt(face.fill.slice(i,i+2),16));assert.ok(Math.max(...channels)-Math.min(...channels)<25,'neutral silver metal shading')}
+    for(const face of part.faces)assert.ok((FRAME_FACE_COLOURS[part.kind] as readonly string[]).includes(face.fill),'shared role shading')
   }
 })

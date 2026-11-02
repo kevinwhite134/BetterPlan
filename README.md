@@ -43,7 +43,7 @@ Stock cutting uses best-fit decreasing with entered saw kerf. It is a heuristic,
 Review offers seven reports with a styled document preview before downloading. Each file is one rectangular table with one header, so filters and sorting work without mixing unrelated sections:
 
 - **Materials & pricing:** purchase quantities, stock dimensions, optional unit rates and line totals. The summary is either an entered-materials total or a known-priced subtotal; missing rates stay blank and zero prices remain valid.
-- **Materials quote:** concise material quantities and prices, with an explicit incomplete status when prices or quantities are missing. It excludes labour, delivery, VAT, unlisted hardware and spare allowances; it is a provisional materials estimate.
+- **Materials quote:** concise material quantities and prices, with an explicit incomplete status when prices or quantities are missing. It includes entered delivery and VAT where specified; labour, unlisted hardware and spare allowances remain excluded. It is a provisional quotation.
 - **Deck board cutting list:** stock board / piece IDs, cut order, use, blank length, finished maximum width, square/rip/notch/angled classification, local cut-outline coordinates and deck location. Kerf is per additional cut and the final remainder appears once per stock board.
 - **Alu-Joist cutting list:** profile stock allocation, member/piece IDs, member type and physical endpoints. Packed cuts map back to actual frame members.
 - **Fascia cutting list:** separate fascia stock allocation, edge IDs, cut lengths, height, physical endpoints and clearance status.
@@ -181,3 +181,16 @@ Review saves customer name/address, site address, project reference and notes in
 The 3D renderer now batches structural and connector faces by style in small projects as well as large ones. Camera and separation updates coalesce to one update per display frame. Part inspection, zoom and the fixed-camera layer thumbnails remain available; quantities and physical geometry are unchanged. In the standard browser example, the complete visualiser plus thumbnails falls from 11,878 SVG face elements to about 200. This is a rendering-element count, not a measured frame-rate multiplier.
 
 Exploded view now spreads individual boards, member stock sections, fascia pieces and joiners horizontally as well as separating tiers vertically. Pedestal bases, adjusting columns and heads also separate. Travel scales with the deck dimensions and the separation slider; zero returns to the assembled model. The camera fits the visible exploded bounds. Component labels use spaced numbered markers and a wrapping text key below the view, with no long crossing leader lines. Picking and focus use the same individual display offsets.
+
+
+## November 2026 punch-list updates
+
+New decks use 3 m aluminium stock; saved/imported projects and saved products retain their entered stock. Report span limits and the existing shared decking/breaker stock policy are unchanged. R Series paving is not supported.
+
+Review includes an optional customer Eircode, net delivery charge (default zero) and an entered VAT percentage (blank until specified; zero is valid). The percentage applies to the rounded materials subtotal plus net delivery. Review, PDF quotations, quotation CSV and the Excel Quote sheet share cent rounding. Incomplete quantities/prices retain a known net subtotal and withhold a complete VAT/gross quotation total. Excel delivery and VAT cells are editable and its formulas recalculate when the Materials rates change; Materials remains a net material take-off.
+
+Both quotation PDFs and customer packs include customer details, overall deck dimensions and area. Browser downloads append the matching three unchanged K Series calculation pages for the selected frame and load. Customer packs include this extract once, including when installer pages are selected. Standalone installer downloads retain their full reference selection. Programmatic quotation/customer-pack exporters accept `spanReport` bytes; composed quotation/installer exporters support `includeReferences: false`. A browser report-load failure fails the download instead of silently omitting the extract.
+
+Finish offers **Download 3D support PDF**: a fitted assembled isometric frame illustration with decking removed, including actual joists, bearers and pedestals. Generated plans and 3D views use purple bearers and green joists/rim/blocking; original supplier documents retain their own colours. Unresolved geometry blocks support/installer exports.
+
+Supports measurement mode adds a paginated, expandable pedestal-span table. The installer PDF adds corresponding paginated measurements without entry IDs: physical endpoint X/Y coordinates and true centre-to-centre length for each consecutive pedestal pair on a real primary member. Shared pairs are deduplicated and separate members across openings are not bridged. Screen/CSV IDs are retained.

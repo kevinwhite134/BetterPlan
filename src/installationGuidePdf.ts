@@ -1,3 +1,4 @@
+import { FRAME_COLOURS } from './frameColours.ts'
 import { rgb, PDFString } from 'pdf-lib'
 import type { PDFDocument, PDFPage, PDFFont } from 'pdf-lib'
 import { installationGuide } from './installationGuide.ts'
@@ -34,7 +35,7 @@ export function appendInstallationGuide(doc:PDFDocument,font:PDFFont,bold:PDFFon
   const scale=Math.min(167/Math.max(1,m.width),93/Math.max(1,m.depth)),ox=109-m.width*scale/2,oy=85+(93-m.depth*scale)/2
   const project=(q:{x:number;y:number})=>({x:ox+q.x*scale,y:oy+q.y*scale})
   for(const p of m.pedestals){const q=project(p);overview.drawCircle({x:q.x*MM,y:overview.getHeight()-q.y*MM,size:Math.max(.45,p.diameter*scale/2)*MM,borderColor:ink('#788268'),borderWidth:.12*MM})}
-  for(const member of m.members){const a=project(member.a),b=project(member.b);line(overview,a.x,a.y,b.x,b.y,member.kind==='bearer'?'#aa7b32':'#426c52',member.kind==='bearer'?.5:.25)}
+  for(const member of m.members){const a=project(member.a),b=project(member.b);line(overview,a.x,a.y,b.x,b.y,FRAME_COLOURS[member.kind],member.kind==='bearer'?.5:.25)}
   for(const edge of m.edges){const a=project(edge.a),b=project(edge.b);line(overview,a.x,a.y,b.x,b.y,'#303728',.4)}
   for(const hole of m.cutouts)for(const [i,q] of hole.points.entries()){const a=project(q),b=project(hole.points[(i+1)%hole.points.length]);line(overview,a.x,a.y,b.x,b.y,'#303728',.5)}
   const datum=project({x:0,y:0});text(overview,'X / Y datum',Math.max(21,datum.x),Math.min(185,datum.y+5),2.7)

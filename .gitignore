@@ -25,3 +25,6 @@ dist-ssr
 
 tmp/
 output/
+
+# Local browser verification artifacts
+.playwright-cli/

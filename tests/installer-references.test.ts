@@ -54,8 +54,8 @@ test('PDF appends unchanged source pages and the correct illustration',async()=>
     const s={...DEFAULT_SETTINGS,frame},plan=planDeck(s),selected=installerReferenceSelection(s)
     const pdf=await PDFDocument.load(await exportInstallerPdf(plan,s,{references:{spanReport,illustration:illustration(selected.illustration!)}}))
     const offset=pdf.getPageCount()-selected.pages.length
-    // Generated content is six concise pages, with no coordinate/connection tables.
-    assert.equal(offset,6)
+    // The concise guide is followed by paginated real pedestal-span measurements.
+    assert.equal(offset,6+Math.ceil(installerPlan(plan,s).pedestalSpans.length/27))
     for(const [i,page] of selected.pages.entries())assert.deepEqual(streams(pdf,offset+i),streams(source,page-1))
   }
 })

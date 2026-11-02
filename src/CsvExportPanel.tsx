@@ -1,3 +1,5 @@
+import QuotationTotals from './QuotationTotals'
+import { quotationEstimate, QUOTATION_EXCLUSIONS } from './quotationEstimate'
 import { customerPlanSvg } from './customerPlan'
 import { ChoiceField, Field } from './SettingControls'
 import { useMemo, useState } from 'react'
@@ -5,7 +7,6 @@ import Brand from './Brand'
 import { buildCsvReport, CSV_REPORTS, serializeCsv } from './csvExport'
 import type { CsvKind } from './csvExport'
 import type { Plan, Settings } from './planner'
-import { materialEstimate } from './materialEstimate'
 import { deckPreviewPng, deckPreviewSvg, deckPreviewUrl } from './deckPreview'
 
 export default function CsvExport({plan,settings,prices,onDownload}:{plan:Plan;settings:Settings;prices:Record<string,string>;onDownload:(filename:string,content:string|ArrayBuffer,type?:string)=>void}){
@@ -14,7 +15,7 @@ export default function CsvExport({plan,settings,prices,onDownload}:{plan:Plan;s
   const report=useMemo(()=>buildCsvReport(kind,plan,settings,prices),[kind,plan,settings,prices])
   const deckSvg=useMemo(()=>deckPreviewSvg(plan,settings),[plan,settings])
   const selected=CSV_REPORTS.find(q=>q.id===kind)!
-  const estimate=materialEstimate(plan,prices),pricing=kind==='quote'||kind==='materials'
+  const pricing=kind==='quote'||kind==='materials'
   const columns=pricing?['Component','Quantity','Unit','Unit rate EUR','Line total EUR','Status']:report.headers
   const indices=columns.map(q=>report.headers.indexOf(q)),previewRows=(pricing?report.rows.filter(q=>q[0]==='Item'):report.rows).slice(0,8)
   const currency=new Intl.NumberFormat('en-IE',{style:'currency',currency:'EUR'}),rateCurrency=new Intl.NumberFormat('en-IE',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:4}),number=new Intl.NumberFormat('en-IE',{maximumFractionDigits:2})
@@ -41,8 +42,9 @@ export default function CsvExport({plan,settings,prices,onDownload}:{plan:Plan;s
         {pricing?<img className="paper-deck-render" src={deckPreviewUrl(deckSvg)} alt={`3D preview of the current deck in ${settings.board.colourName}`}/>:null}
       </div>
       <div className="table-scroll"><table><thead><tr>{columns.map(header=><th key={header}>{header.replace('Line total EUR','Amount').replace('Unit rate EUR','Unit rate')}</th>)}</tr></thead><tbody>{previewRows.map((row,i)=><tr key={i}>{indices.map((index,j)=>{const cell=row[index],money=columns[j].includes('EUR'),status=columns[j]==='Status';return <td key={j} className={`${typeof cell==='number'?'paper-numeric':''} ${status?'paper-status':''}`} title={cell===null?'':String(cell)}>{cell===null?<span className="paper-empty">—</span>:typeof cell==='number'?money?(columns[j].startsWith('Unit rate')?rateCurrency:currency).format(cell):number.format(cell):cell}</td>})}</tr>)}</tbody></table></div>
-      {pricing?<div className="paper-total"><div><span>{estimate.complete?'Entered materials total':'Known priced subtotal'}</span><small>{estimate.priced} of {estimate.lines.length} unit rates entered</small></div><strong>{estimate.priced?currency.format(estimate.subtotalCents/100):'Rates not entered'}</strong></div>:report.rows.length>8?<p className="paper-more">Showing 8 of {report.rows.length} rows. The download includes the complete schedule.</p>:null}
-      <p className="paper-scope">{pricing?'Materials only. Labour, delivery, VAT and unlisted hardware are excluded.':'All sizes and positions in millimetres. Refer to the project details for coordinate conventions.'} Provisional quantities. Applied fascia recess: {Math.round(plan.frame.fasciaClearance*1000)} mm. Maximum metal end projection: {Math.round(Math.max(0,...plan.frame.projections.map(q=>q.distance))*1000)} mm; supplier limits and connections require confirmation.</p>
+      {!pricing&&report.rows.length>8?<p className="paper-more">Showing 8 of {report.rows.length} rows. The download includes the complete schedule.</p>:null}
+      {pricing?<QuotationTotals estimate={quotationEstimate(plan,settings,prices)}/>:null}
+      <p className="paper-scope">{pricing?QUOTATION_EXCLUSIONS:'All sizes and positions in millimetres. Refer to the project details for coordinate conventions.'} Provisional quantities. Applied fascia recess: {Math.round(plan.frame.fasciaClearance*1000)} mm. Maximum metal end projection: {Math.round(Math.max(0,...plan.frame.projections.map(q=>q.distance))*1000)} mm; supplier limits and connections require confirmation.</p>
     </div></details>}
     <div className="csv-format-note"><p>Excel: all reports, formatted. CSV: selected report.</p><ChoiceField<','|';'> label="CSV separator" ariaLabel="Column separator" value={delimiter} options={[{value:',',label:'Comma (,)'},{value:';',label:'Semicolon (;)'}]} onChange={setDelimiter}/></div>
   </section>

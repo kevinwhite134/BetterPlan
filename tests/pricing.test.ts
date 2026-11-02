@@ -9,7 +9,7 @@ import { createDeckWorkbook } from '../src/workbookExport.ts'
 
 test('default stock rates use net euro prices per purchased item, not gross or per-metre amounts',()=>{
   const {rates}=defaultPricing(DEFAULT_SETTINGS)
-  assert.deepEqual(rates,{boards:'35.51',profile35:'34.44',profile80:'41.33',pedestals:'11.21',skirting:'48.04',clips:'0.60',continuousJoiners:'1.68',joistJoiners:'1.20',perpendicularJoiners:'1.20'})
+  assert.deepEqual(rates,{boards:'35.51',profile35:'28.23',profile80:'33.87',pedestals:'11.21',skirting:'48.04',clips:'0.60',continuousJoiners:'1.68',joistJoiners:'1.20',perpendicularJoiners:'1.20'})
 })
 
 test('published pedestal models use their own single-unit rate with Dutch VAT removed',()=>{

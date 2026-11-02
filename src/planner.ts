@@ -44,7 +44,7 @@ export const DEFAULT_BOARD: BoardProfile = { id: 'default', name: 'Custom compos
 export const DEFAULT_SETTINGS: Settings = {
   polygon: [{x:0,y:0},{x:6,y:0},{x:6,y:3.238},{x:0,y:3.238}], direction:'horizontal', joints:'breaker', board: DEFAULT_BOARD,
   frame:'big-small', frameSelection:'auto', pedestalSelection:'auto', load:3, height:250, variation:20, pedestalMin:35, pedestalMax:250,
-  pedestalName:'Custom adjustable pedestal', joistSpacing:400, kerf:3, frameStock:3.66, confirmed:false, skirting:true, allowRipping:true, breakerWidth:'auto', selectionObjective:'cost',
+  pedestalName:'Custom adjustable pedestal', joistSpacing:400, kerf:3, frameStock:3, confirmed:false, skirting:true, allowRipping:true, breakerWidth:'auto', selectionObjective:'cost',
 }
 export const fasciaBoardWidth = (s:Settings) => s.skirtingHeight??s.board.width
 export const fasciaRowCount = (s:Settings) => s.skirtingRows??Math.max(1,Math.ceil((s.height-s.board.thickness)/fasciaBoardWidth(s)))

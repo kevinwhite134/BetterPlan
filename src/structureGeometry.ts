@@ -2,12 +2,12 @@ import { pedestalHeight, surveyReadings } from './pedestalSurvey.ts'
 import type { Plan, Point, Settings } from './planner.ts'
 import { frameMemberName, pedestalReference } from './productNames.ts'
 import { frameHardware, PEDESTAL_COLUMN_DIAMETER, renderedMember } from './frameHardware.ts'
+import { FRAME_FACE_COLOURS as colours } from './frameColours.ts'
 
 export type Position3=Point&{z:number}
 export type StructureExposure='finished'|'boards'|'joists'|'bearers'|'pedestals'
 export type StructureFace={points:Position3[];normal:Position3;fill:string}
 export type StructurePart={id:string;label:string;kind:'pedestal'|'bearer'|'joist';centre:Position3;faces:StructureFace[]}
-const colours={joist:['#d4d9dc','#8e989f'],bearer:['#c6cdd2','#7c878f'],noggin:['#e0e4e7','#96a0a7'],rim:['#d4d9dc','#8e989f']} as const
 
 export function structureGeometry(plan:Plan,s:Settings,exposure:StructureExposure,showSupports:boolean):StructurePart[]{
   const parts:StructurePart[]=[],boardBottom=-s.board.thickness/1000,head=boardBottom-(plan.frame.rule.joist+plan.frame.rule.bearer)/1000
