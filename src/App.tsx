@@ -51,10 +51,10 @@ function ColourHex({value,onChange,...controlProps}: {value:string;onChange:(val
 }
 function ShapeEditor({settings,onChange}: {settings:Settings;onChange:(p:Point[])=>void}) {
   const box=bounds(settings.polygon),[width,setWidth]=useState(box.width),[depth,setDepth]=useState(box.depth),[notchW,setNotchW]=useState(2),[notchD,setNotchD]=useState(1.5),[shape,setShape]=useState('rectangle')
-  const [text,setText]=useState(settings.polygon.map(p=>`${p.x}, ${p.y}`).join('\n')),[error,setError]=useState('')
+  const [text,setText]=useState(''),[error,setError]=useState('')
   const [previousPolygon,setPreviousPolygon]=useState(settings.polygon)
-  if(previousPolygon!==settings.polygon){setPreviousPolygon(settings.polygon);setWidth(box.width);setDepth(box.depth);setText(settings.polygon.map(p=>`${p.x}, ${p.y}`).join('\n'))}
-  const apply=(p:Point[])=>{const err=polygonError(p)||cutoutPlacementError(p,settings.cutouts??[],pictureFrameWidth(settings)+settings.board.gap/1000+.05);setError(err);if(!err){const q=normalize(p);onChange(q);setText(q.map(a=>`${a.x}, ${a.y}`).join('\n'))}}
+  if(previousPolygon!==settings.polygon){setPreviousPolygon(settings.polygon);setWidth(box.width);setDepth(box.depth);setText('')}
+  const apply=(p:Point[])=>{const err=polygonError(p)||cutoutPlacementError(p,settings.cutouts??[],pictureFrameWidth(settings)+settings.board.gap/1000+.05);setError(err);if(!err){const q=normalize(p);onChange(q);setText('')}}
   const preset=()=>{
     if(!Number.isFinite(width+depth)||width<.3||depth<.3){setError('Enter dimensions of at least 0.3 m.');return}
     if((shape==='l'||shape==='u')&&(!Number.isFinite(notchW+notchD)||notchW<=0||notchW>=width||notchD<=0||notchD>=depth)){setError('The cut-out must fit inside the deck dimensions.');return}
@@ -68,7 +68,7 @@ function ShapeEditor({settings,onChange}: {settings:Settings;onChange:(p:Point[]
     <div className="field-grid"><Field label="Overall width" unit="m"><Numeric value={width} onChange={setWidth} min={.3} max={MAX_PROJECT_SIZE} step={.1}/></Field><Field label="Overall depth" unit="m"><Numeric value={depth} onChange={setDepth} min={.3} max={MAX_PROJECT_SIZE} step={.1}/></Field></div>
     {shape==='l'||shape==='u'?<div className="field-grid"><Field label="Cut-out width" unit="m"><Numeric value={notchW} onChange={setNotchW} min={.1} step={.1}/></Field><Field label="Cut-out depth" unit="m"><Numeric value={notchD} onChange={setNotchD} min={.1} step={.1}/></Field></div>:null}
     <button className="button primary full" onClick={preset}>Apply outline <span><OpenIcon/></span></button>
-    <details className="custom-outline"><summary>Custom outline / edit corners</summary><p>One x, y pair per line in metres, in boundary order. Add internal openings in Cutouts below.</p><Field label="Corner coordinates"><textarea rows={8} value={text} onChange={e=>setText(e.target.value)} spellCheck={false}/></Field><button className="button secondary full" onClick={()=>apply(text.trim().split(/\n/).map(line=>{const a=line.trim().split(/[,\s]+/);return{x:a.length===2?Number(a[0]):NaN,y:a.length===2?Number(a[1]):NaN}}))}>Apply corners</button></details>
+    <section className="custom-outline" aria-labelledby="custom-outline-title"><h3 id="custom-outline-title">Custom outline / edit corners</h3><p>One x, y pair per line in metres, in boundary order. Add internal openings in Cutouts below.</p><Field label="Corner coordinates"><textarea rows={8} placeholder="Paste coordinates here…" value={text} onChange={e=>setText(e.target.value)} spellCheck={false}/></Field><button className="button secondary full" disabled={!text.trim()} onClick={()=>apply(text.trim().split(/\n/).map(line=>{const a=line.trim().split(/[,\s]+/);return{x:a.length===2?Number(a[0]):NaN,y:a.length===2?Number(a[1]):NaN}}))}>Apply corners</button></section>
     {error?<p className="error" role="alert">{error}</p>:null}</>
 }
 function BoardEditor({settings:s,onChange,products,onApply,onManage,onSaveCurrent,onEditBreakers}: {settings:Settings;onChange:(s:Settings)=>void;products:LibraryProduct[];onApply:(p:LibraryProduct)=>void;onManage:()=>void;onSaveCurrent:()=>void;onEditBreakers:()=>void}) {

@@ -1,4 +1,6 @@
 /* Shared interface polish. Technical drawing and 3D material palettes live separately. */
+.custom-outline > h3 { font-size: 14px; font-weight: 500; line-height: 1.6; margin: 0; }
+.custom-outline textarea::placeholder { color: #849079; opacity: 1; }
 .measured-plan-window.interactive-plan { position: relative; overflow: hidden; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
 .interactive-plan.is-dragging { cursor: grabbing; }
 .interactive-plan .measured-deck-plan { position: absolute; inset: 0; width: 100%; height: 100%; transform-origin: 0 0; pointer-events: none; }
