@@ -125,7 +125,7 @@ export default function App() {
   }
   const projectLibrary=useProjectWorkspace({settings,prices,stage},loadProject,!home)
   const currentProject=projectLibrary.workspace?.projects.find(p=>p.id===projectLibrary.workspace?.activeId)
-  useEffect(()=>{document.title=home?'Projects | BetterPlan':`${currentProject?.name??'Deck'} | BetterPlan`},[home,currentProject?.name])
+  useEffect(()=>{document.title=home?'Home | BetterPlan':`${currentProject?.name??'Deck'} | BetterPlan`},[home,currentProject?.name])
 
 
   const plan=computed.plan,schemaError=validateSettings(settings),step=TABS.findIndex(t=>t.id===stage),dirty=outlineDirty||breakerDirty
@@ -172,13 +172,13 @@ export default function App() {
     <header className="topbar"><a className="brand" href="#" aria-label="BetterPlan projects" onClick={e=>{e.preventDefault();showProjects()}}><Brand/></a><div className="header-actions">
       {!home&&currentProject?<div className="editor-project-title"><button type="button" className="text-button" onClick={showProjects}>← Projects</button><input key={currentProject.id} className="editor-project-name" aria-label="Current project name" title="Edit project name" defaultValue={currentProject.name} maxLength={120} onBlur={e=>{projectLibrary.rename(currentProject.id,e.target.value);e.target.value=e.target.value.trim()||'Untitled project'}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();if(e.key==='Escape'){e.currentTarget.value=currentProject.name;e.currentTarget.blur()}}}/></div>:null}
       <span role="status" className={`saved-indicator ${projectLibrary.saveState==='error'?'project-saving-error':''}`}><i/>{projectLibrary.saveState==='error'?'Not saved':!projectLibrary.ready?'Loading…':projectLibrary.saveState==='saving'?'Saving…':dirty?'Draft not applied':'Saved'}</span>
-      <button type="button" className="button quiet products-button" onClick={()=>openProducts()} disabled={dirty||!projectLibrary.ready}>Products</button>
+      {!home?<button type="button" className="button quiet products-button" onClick={()=>openProducts()} disabled={dirty||!projectLibrary.ready}>Products</button>:null}
     </div></header>
     {projectLibrary.error?<p className="project-storage-error" role="alert">{projectLibrary.error}</p>:null}
     {!projectLibrary.ready?<main className="project-empty" role="status">Loading your projects…</main>:null}
 
     {library?<ProductLibrary storageUnavailable={storageError} products={products} settings={settings} initial={library.initial} onSave={setProducts} onApply={p=>{selectProduct(p,true);setHome(false)}} onClose={()=>setLibrary(null)} onImport={importProducts} onExport={exportProducts}/>:null}
-    {projectLibrary.ready&&home&&projectLibrary.workspace?<ProjectLibrary workspace={projectLibrary.workspace} onOpen={openProject} onCreate={createProject} onRename={projectLibrary.rename} onMove={projectLibrary.move} onAddSection={projectLibrary.addSection} onRenameSection={projectLibrary.renameSection} onImport={importProject} onExport={exportProject}/>:null}
+    {projectLibrary.ready&&home&&projectLibrary.workspace?<ProjectLibrary productCount={products.length} onProducts={()=>openProducts()} workspace={projectLibrary.workspace} onOpen={openProject} onCreate={createProject} onRename={projectLibrary.rename} onMove={projectLibrary.move} onAddSection={projectLibrary.addSection} onRenameSection={projectLibrary.renameSection} onImport={importProject} onExport={exportProject}/>:null}
     {projectLibrary.ready&&!home?<>
 
     <div className="flow-title"><h1>{titles[stage]}</h1></div>

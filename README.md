@@ -200,7 +200,9 @@ Supports measurement mode and the installer PDF put pedestal centre-to-centre di
 
 ## Project library and consolidated files
 
-The library stores each project independently: outline/openings, product snapshots, survey, quotation details, rate overrides, name, section, creation/edit/open dates and last editor step. Recents shows the twelve most recently opened projects; All projects and sections sort by last edit. Search matches project names, customer names and references. Each card has a deterministic isometric deck preview derived from its outline, openings, finish and board direction without solving its support layout.
+The BetterPlan home hub keeps projects in the main grid and gives Products a dedicated catalogue panel. Recent and All projects views share search and a section filter; Manage sections contains the add/rename controls. On smaller screens the catalogue becomes a compact entry above the projects. Project creation uses the currently selected section.
+
+The library stores each project independently: outline/openings, product snapshots, survey, quotation details, rate overrides, name, section, creation/edit/open dates and last editor step. Recent shows the twelve most recently opened matching projects; All projects sorts by last edit. Sections filter either view. Search matches project names, customer names and references. Each card has a deterministic isometric deck preview derived from its outline, openings, finish and board direction without solving its support layout.
 
 The library is local to the current browser/origin, with no account or cloud sync. IndexedDB writes are atomic and ordered. Storage/load failures stay visible and project JSON exports remain available; the app never labels failed writes as saved. Legacy single-project localStorage is retained as a compatibility fallback; catalogues continue using their existing storage. Applied edits save automatically, and project switches retain the last valid design. Draft geometry must be applied or reverted before leaving the editor.
 
