@@ -1,7 +1,6 @@
-import test from 'node:test'
+import test, { mock } from 'node:test'
 import assert from 'node:assert/strict'
-import fs from 'node:fs'
-import { PDFDocument, PDFArray, PDFRawStream } from 'pdf-lib'
+import { PDFDocument } from 'pdf-lib'
 import { DEFAULT_SETTINGS, frameRule, planDeck, validateSettings } from '../src/planner.ts'
 import type { Member } from '../src/planner.ts'
 import { quotationEstimate, quotationSummary } from '../src/quotationEstimate.ts'
@@ -9,7 +8,7 @@ import { buildCsvReport, serializeCsv } from '../src/csvExport.ts'
 import { createDeckWorkbook } from '../src/workbookExport.ts'
 import { exportQuotationPdf } from '../src/quotationPdf.ts'
 import { exportCustomerQuotePack } from '../src/customerQuotePack.ts'
-import { calculationReferenceSelection, appendCalculationReport } from '../src/installerReferences.ts'
+import { exportInstallerPdf } from '../src/installerPdf.ts'
 import { pedestalSpans } from '../src/pedestalSpans.ts'
 import { installerPlan } from '../src/installerPlan.ts'
 import { supportPdfScene, exportSupportPdf } from '../src/supportPdf.ts'
@@ -18,9 +17,6 @@ import { structureGeometry, structurePaths } from '../src/structureGeometry.ts'
 
 const settings={...DEFAULT_SETTINGS,quotation:{customerName:'Test Customer',customerAddress:'Example address',customerEircode:'D02 XY12',deliveryNet:75.55,vatRate:23}}
 const plan=planDeck(settings),prices=Object.fromEntries(plan.materials.map((m,i)=>[m.key,String(i?1.2345:0)]))
-const report=new Uint8Array(fs.readFileSync(new URL('../public/installer-reference/alu-joist-span-report.pdf',import.meta.url)))
-const streams=(doc:PDFDocument,index:number)=>{const contents=doc.getPage(index).node.Contents(),values=contents instanceof PDFArray?contents.asArray():[contents];return values.map(value=>Buffer.from(doc.context.lookup(value,PDFRawStream).getContents()).toString('base64'))}
-
 test('quotation delivery and VAT use rounded line cents, preserve zero and withhold incomplete gross totals',()=>{
   const q=quotationEstimate(plan,settings,prices)
   assert.equal(q.deliveryCents,7555);assert.equal(q.netCents,q.subtotalCents+7555)
@@ -68,26 +64,30 @@ test('CSV and recalculable Excel quotation totals match the shared calculation',
   assert.equal(unpriced.getCell(subtotal+6,5).result,'')
 })
 
-test('all frame/load quotation extracts contain the matching three unchanged source pages',async()=>{
-  const source=await PDFDocument.load(report),expected={small:{3:[56,57,58],5:[59,60,61]},big:{3:[8,9,10],5:[11,12,13]},'small-small':{3:[62,63,64],5:[65,66,67]},'big-small':{3:[14,15,16],5:[17,18,19]}}
-  for(const frame of ['small','big','small-small','big-small'] as const)for(const load of [3,5] as const){
-    const s={...settings,frame,load},selection=calculationReferenceSelection(s)
-    assert.deepEqual(selection,expected[frame][load])
-    const pdf=await PDFDocument.load(await exportQuotationPdf(planDeck(s),s,prices,{spanReport:report}))
-    for(const [i,page] of selection.entries())assert.deepEqual(streams(pdf,pdf.getPageCount()-3+i),streams(source,page-1))
-  }
-  await assert.rejects(async()=>appendCalculationReport(source,settings,new Uint8Array(await (await PDFDocument.create()).save())),/67-page/)
+test('quotations do not request or append span reports for any frame/load case',async()=>{
+  const descriptor=Object.getOwnPropertyDescriptor(globalThis,'window'),requests:string[]=[]
+  Object.defineProperty(globalThis,'window',{configurable:true,value:{}})
+  const fetch=mock.method(globalThis,'fetch',async(url:string)=>{requests.push(String(url));throw new Error('Report assets unavailable')})
+  try{
+    for(const frame of ['small','big','small-small','big-small'] as const)for(const load of [3,5] as const){
+      const s={...settings,frame,load},pdf=await PDFDocument.load(await exportQuotationPdf(planDeck(s),s,prices))
+      assert.ok(pdf.getPageCount()>0&&pdf.getPageCount()<3,'Only quotation pages are included')
+    }
+    assert.deepEqual(requests,[])
+  }finally{fetch.mock.restore();if(descriptor)Object.defineProperty(globalThis,'window',descriptor);else Reflect.deleteProperty(globalThis,'window')}
 })
 
-test('customer packs append one unmodified engineer extract with or without installer pages',async()=>{
-  const source=await PDFDocument.load(report),selected=calculationReferenceSelection(settings),sourceStreams=selected.map(n=>streams(source,n-1))
-  for(const includeInstaller of [false,true]){
-    const pdf=await PDFDocument.load(await exportCustomerQuotePack(plan,settings,prices,{spanReport:report,includeInstaller}))
-    for(let i=0;i<3;i++){
-      assert.deepEqual(streams(pdf,pdf.getPageCount()-3+i),sourceStreams[i])
-      assert.equal(pdf.getPages().filter((_,index)=>JSON.stringify(streams(pdf,index))===JSON.stringify(sourceStreams[i])).length,1)
-    }
-  }
+test('customer quotation packs omit span reports even when installer drawings are included',async()=>{
+  const descriptor=Object.getOwnPropertyDescriptor(globalThis,'window'),requests:string[]=[]
+  Object.defineProperty(globalThis,'window',{configurable:true,value:{}})
+  const fetch=mock.method(globalThis,'fetch',async(url:string)=>{requests.push(String(url));throw new Error('Report assets unavailable')})
+  try{
+    const short=await PDFDocument.load(await exportCustomerQuotePack(plan,settings,prices))
+    const full=await PDFDocument.load(await exportCustomerQuotePack(plan,settings,prices,{includeInstaller:true}))
+    const installer=await PDFDocument.load(await exportInstallerPdf(plan,settings,{includeReferences:false}))
+    assert.equal(full.getPageCount(),short.getPageCount()+installer.getPageCount())
+    assert.deepEqual(requests,[])
+  }finally{fetch.mock.restore();if(descriptor)Object.defineProperty(globalThis,'window',descriptor);else Reflect.deleteProperty(globalThis,'window')}
 })
 
 test('pedestal spans use actual member neighbours, diagonals and unique shared pairs without crossing gaps',()=>{

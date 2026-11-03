@@ -1,3 +1,8 @@
+import ProjectLibrary from './ProjectHome'
+import ReviewFiles from './ReviewFiles'
+import { useProjectWorkspace } from './useProjectWorkspace'
+import { parseProjectFile, projectFile } from './projectLibrary'
+import type { SavedProject } from './projectLibrary'
 import QuotationTotals from './QuotationTotals'
 import { quotationEstimate } from './quotationEstimate'
 import './DeckScene.css'
@@ -11,16 +16,14 @@ import PerimeterEdgePicker from './PerimeterEdgePicker'
 import { breakerBoardCount } from './breakerWidth'
 import type { ControlLabelProps } from './SettingControls'
 import DeckView from './DeckView'
-import InstallerPlanDownload from './InstallerPlanDownload'
 import Brand from './Brand'
 import FrameSettings from './FrameSettings'
 import SupportEditor from './SupportEditor'
 import ProductLibrary, { ProductPicker } from './ProductsPanel'
 import { appliedProduct, applyProduct, importProductLibrary, mergeProductLibraries, PRODUCT_STORAGE, productFromSettings, productPriceKey, readProductLibrary } from './productLibrary'
 import type { LibraryProduct, ProductKind } from './productLibrary'
-import CsvExport from './CsvExportPanel'
 import { materialEstimate } from './materialEstimate'
-import { defaultPricing, PRICE_CHECKED, PRICE_VERSION, resolvedPricing } from './pricing'
+import { defaultPricing, PRICE_CHECKED, resolvedPricing } from './pricing'
 import DeckSizeOptions from './DeckSizeOptions'
 import OutlineEditor from './OutlineEditor'
 import CutoutEditor from './CutoutEditor'
@@ -40,7 +43,6 @@ function readSaved<T,>(key:string,fallback:T):T {try{const raw=localStorage.getI
 function initialSettings():Settings {const saved=readSaved<Settings|null>(STORAGE,null);try{if(saved&&!validateSettings(saved))return saved}catch{/* Ignore old/invalid projects. */}return DEFAULT_SETTINGS}
 function Numeric({value,onChange,min,max,step=1,...controlProps}: {value:number;onChange:(n:number)=>void;min?:number;max?:number;step?:number}&ControlLabelProps) {return <input {...controlProps} type="number" value={Number.isNaN(value)?'':value} min={min} max={max} step={step} onChange={e=>onChange(e.target.value===''?NaN:Number(e.target.value))}/>}
 function download(name:string,content:string|ArrayBuffer,type:string) {const url=URL.createObjectURL(new Blob([content],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
-function closeProjectMenu(){document.querySelector<HTMLDetailsElement>('.project-menu')?.removeAttribute('open')}
 function ColourHex({value,onChange,...controlProps}: {value:string;onChange:(value:string)=>void}&ControlLabelProps) {
   const [draft,setDraft]=useState(value)
   return <input {...controlProps} aria-label={controlProps['aria-label']??'Colour hex code'} value={draft} maxLength={7} spellCheck={false} onBlur={()=>setDraft(value)} onChange={e=>{setDraft(e.target.value);if(/^#[0-9a-f]{6}$/i.test(e.target.value))onChange(e.target.value)}}/>
@@ -89,7 +91,6 @@ function Materials({plan,settings,prices,onPrices,highlight}: {highlight?:string
   const rates=resolvedPricing(settings,prices),defaults=defaultPricing(settings)
   const estimate=materialEstimate(plan,rates),unresolved=estimate.pending
   return <><div className="materials-heading"><div><h2>Materials &amp; pricing</h2></div></div>
-    <CsvExport plan={plan} settings={settings} prices={rates} onDownload={(filename,content,type)=>download(filename,content,type??'text/csv;charset=utf-8')}/>
     {unresolved?<p className="support-resolution" role="status">Resolve the support layout to complete quantities and totals.</p>:null}
     <div className="table-scroll"><table className="materials-table"><thead><tr><th>Component</th><th>Quantity</th><th>Unit rate (€ ex VAT)</th><th>Subtotal</th></tr></thead><tbody>{estimate.lines.map(m=><tr key={m.key} ref={highlight===m.key?highlightRow:undefined} data-material={m.key} className={highlight===m.key?'material-highlight':undefined}><td><strong>{m.name}</strong><small>{m.note}</small></td><td><b>{m.pending?'Pending':m.qty}</b><small>{m.unit}</small></td><td><div className="rate-input"><input aria-label={`Unit price for ${m.name}`} type="number" min="0" step=".01" placeholder="—" value={rates[m.key]??''} onChange={e=>onPrices({...prices,[m.key]:e.target.value===''?'':String(Math.max(0,+e.target.value))})}/>{Object.hasOwn(prices,m.key)?<button type="button" className="text-button" title="Restore default rate" aria-label={`Restore default rate for ${m.name}`} onClick={()=>onPrices(Object.fromEntries(Object.entries(prices).filter(([key])=>key!==m.key)))}>↺</button>:null}</div></td><td>{m.cents!==null?`€${(m.cents/100).toFixed(2)}`:'—'}</td></tr>)}</tbody></table></div>
     <QuotationTotals estimate={quotationEstimate(plan,settings,rates)}/><details className="material-notes"><summary>Ordering allowances</summary><p className="field-note">Fixings are positions only. Confirm trims, fascia, clips, screws, connections, bracing, substrate work and spares before ordering. No automatic wastage allowance is added.</p></details>
@@ -99,6 +100,7 @@ function Materials({plan,settings,prices,onPrices,highlight}: {highlight?:string
 }
 export default function App() {
   const [inputSettings,setSettings]=useState<Settings>(initialSettings)
+  const [home,setHome]=useState(true)
   const [stage,setStage]=useState<Tab>('shape'),[highlightMaterial,setHighlightMaterial]=useState<string|null>(null)
   const canvas=useRef<HTMLElement>(null)
   useLayoutEffect(()=>{
@@ -106,40 +108,77 @@ export default function App() {
     window.scrollTo({top:0,left:0,behavior:'instant'})
   },[stage])
   const [prices,setPrices]=useState<Record<string,string>>(()=>readSaved('betterdeck-prices-v1',{}))
-  const planning=stage!=='shape'
+  const planning=!home&&stage!=='shape'
   const computed=useDeckPlanning(inputSettings,prices,planning),settings=computed.settings
   const [boardEditing,setBoardEditing]=useState(false)
   const [cutoutPlacement,setCutoutPlacement]=useState<CutoutTool|null>(null),[selectedCutout,setSelectedCutout]=useState<string|null>(null)
   const [outlineDirty,setOutlineDirty]=useState(false),[breakerDirty,setBreakerDirty]=useState(false)
   const [products,setProducts]=useState<LibraryProduct[]>(()=>readProductLibrary(readSaved(PRODUCT_STORAGE,[]),readSaved(PROFILES,[])))
   const [library,setLibrary]=useState<{initial?:LibraryProduct}|null>(null)
-  const profiles=products.flatMap(p=>p.kind==='board'?[{...p.board,id:p.id,name:p.name}]:[])
   const [status,setStatus]=useState(''),[storageError,setStorageError]=useState(false),[showSupports,setShowSupports]=useState(true)
   const [measurements,setMeasurements]=useState(false),[editingSupports,setEditingSupports]=useState(false)
-  const [previous,setPrevious]=useState<{settings:Settings;prices:Record<string,string>}|null>(()=>readSaved('betterdeck-previous-v1',null))
+  const loadProject=(project:SavedProject)=>{
+    setSettings(project.settings);setPrices(project.prices);setStage(project.stage);setHighlightMaterial(null)
+    setCutoutPlacement(null);setSelectedCutout(null);setBoardEditing(false);setOutlineDirty(false);setBreakerDirty(false);setEditingSupports(false);setMeasurements(false);setStatus('')
+  }
+  const projectLibrary=useProjectWorkspace({settings,prices,stage},loadProject,!home)
+  const currentProject=projectLibrary.workspace?.projects.find(p=>p.id===projectLibrary.workspace?.activeId)
+  useEffect(()=>{document.title=home?'Projects | BetterPlan':`${currentProject?.name??'Deck'} | BetterPlan`},[home,currentProject?.name])
+
 
   const plan=computed.plan,schemaError=validateSettings(settings),step=TABS.findIndex(t=>t.id===stage),dirty=outlineDirty||breakerDirty
-  useEffect(()=>{let unavailable=false;try{if(!validateSettings(settings))localStorage.setItem(STORAGE,JSON.stringify(settings));localStorage.setItem(PRODUCT_STORAGE,JSON.stringify(products));localStorage.setItem(PROFILES,JSON.stringify(products.flatMap(p=>p.kind==='board'?[{...p.board,id:p.id,name:p.name}]:[])));localStorage.setItem('betterdeck-prices-v1',JSON.stringify(prices))}catch{unavailable=true}queueMicrotask(()=>setStorageError(unavailable))},[settings,products,prices])
-  const navigate=(next:Tab)=>{closeProjectMenu();if(dirty&&next!==stage){setStatus('Apply or revert the current drawing changes before continuing.');return}setStage(next);setCutoutPlacement(null);setSelectedCutout(null);setBoardEditing(false);setOutlineDirty(false);setBreakerDirty(false);setStatus('')}
+  useEffect(()=>{if(!projectLibrary.ready)return;let unavailable=false;try{if(!validateSettings(settings))localStorage.setItem(STORAGE,JSON.stringify(settings));localStorage.setItem(PRODUCT_STORAGE,JSON.stringify(products));localStorage.setItem(PROFILES,JSON.stringify(products.flatMap(p=>p.kind==='board'?[{...p.board,id:p.id,name:p.name}]:[])));localStorage.setItem('betterdeck-prices-v1',JSON.stringify(prices))}catch{unavailable=true}queueMicrotask(()=>setStorageError(unavailable))},[settings,products,prices,projectLibrary.ready])
+  const navigate=(next:Tab)=>{if(dirty&&next!==stage){setStatus('Apply or revert the current drawing changes before continuing.');return}setStage(next);setCutoutPlacement(null);setSelectedCutout(null);setBoardEditing(false);setOutlineDirty(false);setBreakerDirty(false);setStatus('')}
   const openProducts=(kind?:ProductKind)=>{
-    closeProjectMenu()
     if(!kind){setLibrary({});return}
     const old=appliedProduct(settings,kind),draft=productFromSettings(kind,settings,old?.id??crypto.randomUUID()),rate=resolvedPricing(settings,prices)[productPriceKey(draft)]
     setLibrary({initial:{...old,...draft,...(rate!==undefined&&rate!==''?{unitPrice:Number(rate)}:{})}})
   }
   const selectProduct=(p:LibraryProduct,goToSettings=false)=>{const next=applyProduct(settings,prices,p);setSettings(next.settings);setPrices(next.prices);setStatus('');if(goToSettings)navigate(p.kind==='board'?'boards':'frame')}
   const importProducts=async(file:File)=>{try{if(file.size>25000000)throw new Error('Products file is too large.');const incoming=importProductLibrary(JSON.parse(await file.text()));setProducts(current=>mergeProductLibraries(current,incoming));return ''}catch(error){return error instanceof Error?error.message:'Could not import products.'}}
-  const exportProject=()=>{closeProjectMenu();if(schemaError)return;download('betterplan-project.json',JSON.stringify({version:1,settings,profiles,products,prices:resolvedPricing(settings,prices),priceOverrides:prices,pricingVersion:PRICE_VERSION},null,2),'application/json');setStatus('')}
-  const importProject=async(file:File|undefined)=>{if(!file)return;closeProjectMenu();try{if(file.size>25000000)throw new Error('Project file is too large.');const data=JSON.parse(await file.text());if(data.version!==1)throw new Error('Unsupported project version.');const invalid=validateSettings(data.settings);if(invalid)throw new Error(invalid);const incoming=data.products!==undefined?importProductLibrary(data):readProductLibrary([],data.profiles);const rates:Record<string,string>={},savedRates=data.pricingVersion===PRICE_VERSION&&data.priceOverrides&&typeof data.priceOverrides==='object'?data.priceOverrides:data.prices;if(savedRates&&typeof savedRates==='object')for(const [key,value]of Object.entries(savedRates))if(typeof value==='string'&&(!value||Number.isFinite(+value)&&+value>=0))rates[key]=value;setSettings(data.settings);setProducts(current=>mergeProductLibraries(current,incoming));setPrices(rates);setOutlineDirty(false);setBreakerDirty(false);setStage('shape');setCutoutPlacement(null);setSelectedCutout(null);setBoardEditing(false);setStatus('')}catch(error){setStatus(error instanceof Error?error.message:'Could not import project.')}}
-  const newDeck=()=>{closeProjectMenu();if(dirty){setStatus('Apply or revert the current drawing before starting a new deck.');return}setPrevious({settings,prices});try{localStorage.setItem('betterdeck-previous-v1',JSON.stringify({settings,prices}))}catch{/* Current project can still be exported. */}setSettings({...DEFAULT_SETTINGS,board:{...DEFAULT_SETTINGS.board}});setPrices({});setStage('shape');setCutoutPlacement(null);setSelectedCutout(null);setBoardEditing(false);setStatus('')}
-  const restorePrevious=()=>{closeProjectMenu();if(!previous||validateSettings(previous.settings)){setStatus('No valid previous deck is available.');return}setSettings(previous.settings);setPrices(previous.prices);setPrevious(null);try{localStorage.removeItem('betterdeck-previous-v1')}catch{/* Storage may be unavailable. */}setOutlineDirty(false);setBreakerDirty(false);setBoardEditing(false);setStage('shape');setCutoutPlacement(null);setSelectedCutout(null);setStatus('')}
+  const canLeave=()=>{
+    if(dirty||editingSupports){setStatus('Apply or revert the current drawing changes before switching projects.');return false}
+    if(schemaError){setStatus('Correct the current settings before switching projects.');return false}
+    return true
+  }
+  const showProjects=()=>{if(!canLeave())return;projectLibrary.saveCurrent();setHome(true);setStatus('')}
+  const openProject=(project:SavedProject)=>{if(!canLeave())return;projectLibrary.open(project);setHome(false)}
+  const createProject=(name:string,section:string)=>{if(!canLeave())return;projectLibrary.create(name,section);setHome(false)}
+  const exportProject=(project?:SavedProject)=>{
+    if(!projectLibrary.workspace)return
+    const selected=project??(currentProject?{...currentProject,settings,prices,stage}:null)
+    if(!selected||validateSettings(selected.settings))return
+    const filename=selected.name.replace(/[<>:"/\\|?*]/g,'-').slice(0,100)||'betterplan-project'
+    download(`${filename}.betterplan.json`,JSON.stringify(projectFile(selected,projectLibrary.workspace.sections,products),null,2),'application/json');setStatus('')
+  }
+  const importProject=async(file:File)=>{
+    if(!canLeave())return 'Apply or revert the current drawing and correct its settings before importing.'
+    try{
+      if(file.size>25000000)throw new Error('Project file is too large.')
+      const imported=parseProjectFile(JSON.parse(await file.text()),file.name.replace(/(?:\.betterplan)?\.json$/i,''))
+      const section=projectLibrary.addSection(imported.section)
+      projectLibrary.create(imported.name,section,{settings:imported.settings,prices:imported.prices,stage:'shape'})
+      setProducts(current=>mergeProductLibraries(current,imported.products));setHome(false);setStatus('');return ''
+    }catch(error){return error instanceof Error?error.message:'Could not import project.'}
+  }
+  const exportProducts=()=>download('betterplan-products.json',JSON.stringify({version:1,type:'betterplan-products',products},null,2),'application/json')
   const saveCutouts=(next:Settings)=>{const error=validateSettings(next);if(error)return error;setSettings(next);setStatus('');return ''}
   const ready=!computed.pending&&!dirty&&(stage==='shape'?!polygonError(settings.polygon):!schemaError&&(stage!=='boards'||!!plan))
   const reviewCount=plan?Number(!plan.frame.geometryPass)+Number(!plan.heightFits)+Number(plan.boards.fit.needsAdjustment)+Number(!settings.confirmed)+Number(!settings.edgeDetailConfirmed)+Number(!!settings.skirting&&plan.skirtingGap<0):1
   const titles:Record<Tab,string>={shape:'Deck shape',boards:'Deck boards',frame:'Frame & supports',finish:'Finish',materials:'Review & export'}
-  return <div className="app-shell guided-app">
-    <header className="topbar"><a className="brand" href="#" aria-label="BetterPlan home"><Brand/></a><div className="header-actions"><span className="saved-indicator"><i/>{storageError?'Export to save':dirty?'Draft not applied':'Saved'}</span><button type="button" className="button quiet products-button" onClick={()=>openProducts()} disabled={dirty}>Products</button><button className="button quiet" onClick={newDeck}>＋ New deck</button><details className="project-menu"><summary>Project ▾</summary><div><label className="button quiet import-button">Import project<input aria-label="Import project" type="file" accept=".json" onChange={e=>{void importProject(e.target.files?.[0]);e.target.value=''}}/></label><button className="button quiet" onClick={exportProject} disabled={!!schemaError}>Export project</button>{previous?<button className="button quiet" onClick={restorePrevious}>Restore previous deck</button>:null}</div></details></div></header>
-    {library?<ProductLibrary storageUnavailable={storageError} products={products} settings={settings} initial={library.initial} onSave={setProducts} onApply={p=>selectProduct(p,true)} onClose={()=>setLibrary(null)} onImport={importProducts} onExport={()=>download('betterplan-products.json',JSON.stringify({version:1,type:'betterplan-products',products},null,2),'application/json')}/>:null}
+  return <div className={`app-shell guided-app ${home?'projects-screen':'project-editor'}`}>
+    <header className="topbar"><a className="brand" href="#" aria-label="BetterPlan projects" onClick={e=>{e.preventDefault();showProjects()}}><Brand/></a><div className="header-actions">
+      {!home&&currentProject?<div className="editor-project-title"><button type="button" className="text-button" onClick={showProjects}>← Projects</button><input key={currentProject.id} className="editor-project-name" aria-label="Current project name" defaultValue={currentProject.name} maxLength={120} onBlur={e=>{projectLibrary.rename(currentProject.id,e.target.value);e.target.value=e.target.value.trim()||'Untitled project'}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur()}}/></div>:null}
+      <span className={`saved-indicator ${projectLibrary.saveState==='error'?'project-saving-error':''}`}><i/>{projectLibrary.saveState==='error'?'Not saved':!projectLibrary.ready?'Loading…':projectLibrary.saveState==='saving'?'Saving…':dirty?'Draft not applied':'Saved'}</span>
+      <button type="button" className="button quiet products-button" onClick={()=>openProducts()} disabled={dirty||!projectLibrary.ready}>Products</button>
+    </div></header>
+    {projectLibrary.error?<p className="project-storage-error" role="alert">{projectLibrary.error}</p>:null}
+    {!projectLibrary.ready?<main className="project-empty" role="status">Loading your projects…</main>:null}
+
+    {library?<ProductLibrary storageUnavailable={storageError} products={products} settings={settings} initial={library.initial} onSave={setProducts} onApply={p=>{selectProduct(p,true);setHome(false)}} onClose={()=>setLibrary(null)} onTransfer={()=>{setLibrary(null);setHome(false);navigate('materials')}}/>:null}
+    {projectLibrary.ready&&home&&projectLibrary.workspace?<ProjectLibrary workspace={projectLibrary.workspace} onOpen={openProject} onCreate={createProject} onRename={projectLibrary.rename} onMove={projectLibrary.move} onAddSection={projectLibrary.addSection} onRenameSection={projectLibrary.renameSection} onImport={importProject} onExport={exportProject}/>:null}
+    {projectLibrary.ready&&!home?<>
+
     <div className="flow-title"><h1>{titles[stage]}</h1></div>
     <nav className="guided-steps" aria-label="Deck creation steps">{TABS.map((t,i)=><button key={t.id} onClick={()=>navigate(t.id)} className={`${i===step?'active':''} ${i<step?'visited':''}`} aria-current={i===step?'step':undefined}><span>{i<step?'✓':i+1}</span><b>{t.label}</b></button>)}</nav>
     {editingSupports&&plan?<SupportEditor plan={plan} settings={settings} onApply={setSettings} onClose={()=>setEditingSupports(false)}/>:null}
@@ -149,24 +188,25 @@ export default function App() {
         {stage==='boards'?<BoardEditor settings={settings} onChange={setSettings} products={products} onApply={selectProduct} onManage={()=>openProducts()} onSaveCurrent={()=>openProducts('board')} onEditBreakers={()=>setBoardEditing(true)}/>:null}
         {stage==='frame'?<FrameSettings settings={settings} onChange={setSettings} plan={plan} prices={prices} products={products} onApplyProduct={selectProduct} onManageProducts={()=>openProducts()} onSaveProduct={openProducts} providedRecommendation={computed.recommendation} pending={computed.pending} onEditSupports={()=>setEditingSupports(true)}/>:null}
         {stage==='finish'?<FinishSettings settings={settings} onChange={setSettings} plan={plan}/>:null}
-        {stage==='materials'?<><QuotationSettings s={settings} onChange={setSettings}/><div className="section-heading"><h2>Project settings</h2></div><div className={`review-state ${reviewCount?'needs-review':''}`}><strong>{reviewCount?`${reviewCount} areas need review`:'Geometry checks complete'}</strong><p>Concept estimate. Confirm pedestal capacity, ground bearing and connections.</p></div><button className="button secondary full" onClick={exportProject} disabled={!!schemaError}>Export project ↓</button></>:null}
+        {stage==='materials'?<><QuotationSettings s={settings} onChange={setSettings}/><div className="section-heading"><h2>Project settings</h2></div><div className={`review-state ${reviewCount?'needs-review':''}`}><strong>{reviewCount?`${reviewCount} areas need review`:'Geometry checks complete'}</strong><p>Concept estimate. Confirm pedestal capacity, ground bearing and connections.</p></div></>:null}
         {stage==='boards'?<DeckSizeOptions key={JSON.stringify(settings)} settings={settings} disabled={dirty} onChange={next=>{setSettings(next);setStatus('')}}/>:null}
         {plan&&stage!=='shape'?<div className="stage-summary"><div><span>Footprint</span><strong>{plan.area.toFixed(2)} m²</strong></div><div><span>Stock decking boards</span><strong>{plan.boards.bars.length}</strong></div><div><span>Pedestals</span><strong>{plan.frame.layoutStatus==='ready'?plan.frame.pedestals.length:'Pending'}</strong></div></div>:null}
       </aside>
       <section ref={canvas} className="canvas-panel flow-canvas">
-        <div className="stage-canvas-header"><div><strong>{stage==='shape'?'Outline editor':stage==='boards'?boardEditing?'Breaker design preview':'Board layout':stage==='frame'?'Framing & pedestal positions':stage==='finish'?'Finished deck preview':'Materials & cutting schedule'}</strong>{stage==='frame'?<span className="support-layout-source">{plan?.frame.manual?'Custom support layout':'Automatic support generation'}</span>:null}</div>{stage==='boards'&&boardEditing?<button className="button quiet" onClick={()=>{if(breakerDirty){setStatus('Apply or discard the breaker draft before returning to the board plan.');return}setBoardEditing(false)}}>← Board plan</button>:null}<div className="stage-view-actions">{stage==='finish'?<InstallerPlanDownload plan={plan} settings={settings}/>:null}{stage==='frame'?<><button className="button secondary" disabled={!plan||computed.pending} onClick={()=>setEditingSupports(true)}>Edit supports ⛶</button><ChoiceField label="Add measurements" value={measurements} options={[{value:false,label:'Off'},{value:true,label:'On'}]} onChange={setMeasurements} compact/><InstallerPlanDownload plan={plan} settings={settings}/></>:null}{stage==='frame'||stage==='finish'?<ChoiceField label="Show pedestals" value={showSupports||stage==='frame'&&measurements} disabled={stage==='frame'&&measurements} options={[{value:false,label:'Hide'},{value:true,label:'Show'}]} onChange={setShowSupports} compact/>:null}</div></div>
+        <div className="stage-canvas-header"><div><strong>{stage==='shape'?'Outline editor':stage==='boards'?boardEditing?'Breaker design preview':'Board layout':stage==='frame'?'Framing & pedestal positions':stage==='finish'?'Finished deck preview':'Materials & cutting schedule'}</strong>{stage==='frame'?<span className="support-layout-source">{plan?.frame.manual?'Custom support layout':'Automatic support generation'}</span>:null}</div>{stage==='boards'&&boardEditing?<button className="button quiet" onClick={()=>{if(breakerDirty){setStatus('Apply or discard the breaker draft before returning to the board plan.');return}setBoardEditing(false)}}>← Board plan</button>:null}<div className="stage-view-actions">{stage==='frame'?<><button className="button secondary" disabled={!plan||computed.pending} onClick={()=>setEditingSupports(true)}>Edit supports ⛶</button><ChoiceField label="Add measurements" value={measurements} options={[{value:false,label:'Off'},{value:true,label:'On'}]} onChange={setMeasurements} compact/></>:null}{stage==='frame'||stage==='finish'?<ChoiceField label="Show pedestals" value={showSupports||stage==='frame'&&measurements} disabled={stage==='frame'&&measurements} options={[{value:false,label:'Hide'},{value:true,label:'Show'}]} onChange={setShowSupports} compact/>:null}</div></div>
         {stage==='shape'?<OutlineEditor key={JSON.stringify(settings.polygon)} polygon={settings.polygon} cutouts={settings.cutouts} selectedCutout={selectedCutout} onSelectCutout={setSelectedCutout} cutoutPlacement={cutoutPlacement} onCutoutPlacement={setCutoutPlacement} cutoutClearance={pictureFrameWidth(settings)+settings.board.gap/1000+.05} onCutoutsChange={cutouts=>saveCutouts({...settings,cutouts,edgeDetailConfirmed:false,confirmed:false})} onDirtyChange={setOutlineDirty} onApply={polygon=>{const invalid=cutoutPlacementError(polygon,settings.cutouts??[],pictureFrameWidth(settings)+settings.board.gap/1000+.05);if(invalid){setStatus(invalid);return}const x=Math.min(...polygon.map(p=>p.x)),y=Math.min(...polygon.map(p=>p.y));setOutlineDirty(false);setSettings({...settings,polygon:normalize(polygon),perimeterEdges:polygon.length===settings.polygon.length?settings.perimeterEdges:undefined,cutouts:settings.cutouts?.map(h=>({...h,polygon:h.polygon.map(p=>({x:p.x-x,y:p.y-y}))})),edgeDetailConfirmed:false});setStatus('')}}/>:null}
         {stage==='boards'&&boardEditing?<BreakerDesigner key={JSON.stringify([settings.polygon,settings.direction,settings.board,settings.joints,settings.breakerWidth,settings.frame,settings.pedestalDiameter])} settings={settings} plan={plan} onDirtyChange={setBreakerDirty} onApply={next=>{setSettings(next);setBreakerDirty(false);setStatus('')}}/>:null}
         {stage==='boards'&&!boardEditing&&plan?<><DeckView plan={plan} settings={settings} layer="boards" showSupports={showSupports}/><BoardFit plan={plan} settings={settings}/></>:null}
         {stage==='frame'&&plan?<><DeckView plan={plan} settings={settings} layer="frame" showSupports={showSupports} measurements={measurements}/>{measurements?<p className="measurement-key">All dimensions in mm · Support dimensions are centre-to-centre; identical parallel intervals are shown once · Exact support positions remain in the CSV.</p>:null}<SupportAudit plan={plan} settings={settings}/></>:null}
         {stage==='finish'&&plan?<DeckView plan={plan} settings={settings} layer="3d" showSupports={showSupports} prices={resolvedPricing(settings,prices)} onShowMaterial={key=>{setHighlightMaterial(key);setStage('materials')}}/>:null}
-        {stage==='materials'&&plan?<div className="review-content"><Materials plan={plan} settings={settings} prices={prices} onPrices={setPrices} highlight={highlightMaterial}/><details className="review-details"><summary>Review support checks</summary><SupportAudit plan={plan} settings={settings}/></details><details className="review-details"><summary>Notes to resolve before ordering</summary><ul>{plan.warnings.map(w=><li key={w}>{w}</li>)}</ul></details></div>:null}
+        {stage==='materials'?<div className="review-content"><ReviewFiles plan={plan} settings={settings} prices={resolvedPricing(settings,prices)} pending={computed.pending} onDownload={(filename,content,type)=>download(filename,content,type??'text/csv;charset=utf-8')} onImportProject={importProject} onExportProject={()=>exportProject()} onImportProducts={importProducts} onExportProducts={exportProducts} productsAvailable={!!products.length} invalid={!!schemaError}/>{plan?<><Materials plan={plan} settings={settings} prices={prices} onPrices={setPrices} highlight={highlightMaterial}/><details className="review-details"><summary>Review support checks</summary><SupportAudit plan={plan} settings={settings}/></details><details className="review-details"><summary>Notes to resolve before ordering</summary><ul>{plan.warnings.map(w=><li key={w}>{w}</li>)}</ul></details></>:null}</div>:null}
         {computed.pending?<div className="deck-view preview-unavailable" role="status"><div className={stage==='finish'?'viewer-stage':'plan-stage'}><p className="preview-placeholder">Calculating the larger project… You can keep editing settings.</p></div></div>:null}
         {!plan&&computed.error?(stage==='frame'||stage==='finish'||stage==='boards'&&!boardEditing)?<div className="deck-view preview-unavailable"><div className={stage==='finish'?'viewer-stage':'plan-stage'}><p className="preview-placeholder">Enter valid values to update the preview.</p></div><p className="designer-error" role="alert">{computed.error} Your outline is retained.</p></div>:<p className="designer-error editor-layout-alert" role="alert">{computed.error} Your outline is retained.</p>:null}
-        {status||storageError?<p className="inline-feedback" role="alert">{storageError?'Browser storage is unavailable. Export the project to save your work.':status}</p>:null}
       </section>
     </main>
-    <div className="flow-navigation"><button className="button secondary" disabled={step===0||dirty} onClick={()=>navigate(TABS[step-1].id)}>← Back</button><span>{dirty?'Apply or revert the current draft to continue.':stage==='materials'?'':`Next: ${TABS[step+1]?.label}`}</span>{step<4?<button className="button primary" disabled={!ready} onClick={()=>navigate(TABS[step+1].id)}>Continue to {TABS[step+1].label.toLowerCase()} →</button>:<button className="button primary" onClick={exportProject} disabled={!!schemaError}>Save project ↓</button>}</div>
+    <div className="flow-navigation"><button className="button secondary" disabled={step===0||dirty} onClick={()=>navigate(TABS[step-1].id)}>← Back</button><span>{dirty?'Apply or revert the current draft to continue.':stage==='materials'?'':`Next: ${TABS[step+1]?.label}`}</span>{step<4?<button className="button primary" disabled={!ready} onClick={()=>navigate(TABS[step+1].id)}>Continue to {TABS[step+1].label.toLowerCase()} →</button>:<button className="button primary" onClick={showProjects} disabled={!!schemaError}>Back to projects →</button>}</div>
+    </>:null}
+        {status||storageError?<p className="inline-feedback" role="alert">{storageError?'Browser storage is unavailable. Export the project to save your work.':status}</p>:null}
     <footer className="site-footer"><span>BetterPlan</span><span>Concept design · supplier and site checks required</span></footer>
   </div>
 }

@@ -4,14 +4,12 @@ import type { Plan, Settings } from './planner.ts'
 import { bounds } from './planner.ts'
 import { installerPlan } from './installerPlan.ts'
 import { quotationEstimate, quotationSummary, QUOTATION_EXCLUSIONS } from './quotationEstimate.ts'
-import { appendCalculationReport, calculationReferenceSelection, loadSpanReport } from './installerReferences.ts'
 import { pdfBrand } from './pdfBrand.ts'
 
 const MM=72/25.4,green=rgb(.38,.42,.17),ink=rgb(.19,.23,.16),muted=rgb(.43,.47,.38)
 const printable=(s:string)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[–—]/g,'-').replace(/[’]/g,"'").replace(/[^\x20-\x7e\n€®²×°±·]/g,' ')
-export type QuotationPdfOptions={now?:Date;logo?:Uint8Array;preview?:Uint8Array;spanReport?:Uint8Array;includeReferences?:boolean}
+export type QuotationPdfOptions={now?:Date;logo?:Uint8Array;preview?:Uint8Array}
 export async function exportQuotationPdf(plan:Plan,s:Settings,prices:Record<string,string>,options:QuotationPdfOptions={}){
-  const report=options.includeReferences===false?undefined:options.spanReport??(typeof window!=='undefined'?await loadSpanReport():undefined)
   const doc=await PDFDocument.create(),font=await doc.embedFont(StandardFonts.Helvetica),bold=await doc.embedFont(StandardFonts.HelveticaBold),brand=await pdfBrand(doc,options.logo)
   const preview=options.preview?await doc.embedPng(options.preview):undefined,now=options.now??new Date(),estimate=quotationEstimate(plan,s,prices),q=s.quotation??{},reference=q.projectReference?.trim()||installerPlan(plan,s).reference
   const date=new Intl.DateTimeFormat('en-IE',{dateStyle:'medium',timeZone:'Europe/Dublin'}).format(now),money=(cents:number)=>`€${(cents/100).toFixed(2)}`
@@ -65,9 +63,7 @@ export async function exportQuotationPdf(plan:Plan,s:Settings,prices:Record<stri
   y+=3
   for(const note of [`${estimate.priced} of ${estimate.lines.length} rates entered.${estimate.pending?' Support and connector quantities are pending.':''}`,QUOTATION_EXCLUSIONS,...(s.joistSpacing>400?[`Entered joist centres: ${s.joistSpacing} mm; exceeds the report's 400 mm limit. Board supplier approval required.`]:[])])paragraph(note,2.6)
   if(q.notes?.trim())paragraph(`Quotation notes: ${q.notes}`,2.8)
-  if(report)paragraph(`Attached engineer extract: BetterDeck Aluminium Profiles Design, 1513-1 revision 2, case ${plan.frame.rule.sheet}, ${s.load} kN/m², K Series composite decking. Original PDF pages ${calculationReferenceSelection(s).join(', ')}. These calculations do not approve custom connections or site conditions.`,2.6)
-  const pages=doc.getPages(),count=pages.length+(report?3:0)
+  const pages=doc.getPages(),count=pages.length
   pages.forEach((p,i)=>{text(p,`BetterDeck® · ${reference}`,14,289,2.3,false,muted);text(p,`${i+1} / ${count}`,183,289,2.3,false,muted)})
-  if(report)await appendCalculationReport(doc,s,report)
   return doc.save()
 }
