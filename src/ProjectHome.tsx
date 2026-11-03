@@ -13,7 +13,7 @@ function ProjectCard({project:p,sections,current,onOpen,onRename,onMove,onExport
     {renaming?<form className="project-rename" onSubmit={e=>{e.preventDefault();onRename(p.id,name);setRenaming(false)}}><input aria-label="Project name" autoFocus maxLength={120} value={name} onChange={e=>setName(e.target.value)}/><button type="submit" className="text-button">Save</button><button type="button" className="text-button" onClick={()=>setRenaming(false)}>Cancel</button></form>:<div className="project-card-title"><h2>{p.name}</h2><button type="button" className="text-button" aria-label={`Rename ${p.name}`} onClick={()=>{setName(p.name);setRenaming(true)}}>Rename</button></div>}
     <p>{p.settings.quotation?.customerName||p.settings.board.colourName} <span>·</span> Updated {updated}</p>
     <label className="project-section-choice"><span>Section</span><select aria-label={`Section for ${p.name}`} value={p.sectionId} onChange={e=>onMove(p.id,e.target.value)}>{sections.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-    <div className="project-card-actions"><button type="button" className="button primary" onClick={()=>onOpen(p)}>Open project →</button><button type="button" className="text-button" onClick={()=>onExport(p)} aria-label={`Export ${p.name}`}>Export JSON ↓</button></div>
+    <div className="project-card-actions"><button type="button" className="button primary" onClick={()=>onOpen(p)}>Open project →</button><button type="button" className="text-button" onClick={()=>onExport(p)} aria-label={`Back up ${p.name}`}>Back up project ↓</button></div>
   </div></article>
 }
 export default function ProjectLibrary(props:Props){
