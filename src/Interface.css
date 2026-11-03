@@ -1,4 +1,10 @@
 /* Shared interface polish. Technical drawing and 3D material palettes live separately. */
+.measured-plan-window.interactive-plan { position: relative; overflow: hidden; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+.interactive-plan.is-dragging { cursor: grabbing; }
+.interactive-plan .measured-deck-plan { position: absolute; inset: 0; width: 100%; height: 100%; transform-origin: 0 0; pointer-events: none; }
+.interactive-plan:focus-visible { outline: 2px solid #677c36; outline-offset: -2px; }
+.interactive-plan-hint { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); padding: 5px 9px; border-radius: 5px; background: #ffffffdf; font-size: 10px; color: #65715b; white-space: nowrap; pointer-events: none; }
+.measurement-zoom button { min-height: 36px; min-width: 42px; }
 .support-views { display: grid; grid-template-columns: minmax(0,1fr) 140px; align-items: center; gap: 12px; padding-right: 18px; }
 .support-views > .deck-view { min-width: 0; }
 .support-view-rail { display: flex; flex-direction: column; gap: 10px; padding: 18px 0; }

@@ -1,3 +1,4 @@
+import InteractivePlan from './InteractivePlan'
 import { FRAME_COLOURS } from './frameColours'
 import { fasciaHeight } from './planner.ts'
 import DeckScene from './DeckScene'
@@ -33,7 +34,7 @@ const wrapRotation=(value:number)=>((value+180)%360+360)%360-180
 function PlanDeckView({plan,settings:s,layer,showSupports,measurements=false}: {plan:Plan;settings:Settings;layer:'boards'|'frame'|'3d';showSupports:boolean;measurements?:boolean}) {
   const id=useId().replaceAll(':',''),[rotation,setRotation]=useState(35),[tilt,setTilt]=useState(52),[exposure,setExposure]=useState<Exposure>('finished'),[orbiting,setOrbiting]=useState(false)
   const drag=useRef<{pointerId:number;x:number;y:number;rotation:number;tilt:number}|null>(null)
-  const [planZoom,setPlanZoom]=useState(1),[planRotation,setPlanRotation]=useState(0),[labels,setLabels]=useState(false)
+  const [planRotation,setPlanRotation]=useState(0),[labels,setLabels]=useState(false)
   const large=isLargePreview(plan)
   const measured=useMemo(()=>measurements&&layer==='frame'&&plan.frame.layoutStatus==='ready'?installerSvg(installerPlan(plan,s)):null,[measurements,layer,plan,s])
   const exposed=exposure==='bearers'&&!plan.frame.rule.bearer?'joists':exposure
@@ -78,7 +79,7 @@ function PlanDeckView({plan,settings:s,layer,showSupports,measurements=false}: {
   return <div className={`deck-view ${layer==='3d'?'perspective':''}`}>
     {layer!=='3d'?<PlanRotation value={planRotation} onChange={setPlanRotation}/>:null}
     <div className={layer==='3d'?'viewer-stage':'plan-stage'}>
-    {measured?<><div className="deck-svg measured-plan-window" tabIndex={0} role="region" aria-label="Measured plan; zoom in and scroll to inspect dimensions"><img className="measured-deck-plan" style={{width:`${planZoom*100}%`,height:`${planZoom*100}%`}} src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(rotatePlanSvg(measured,planRotation))}`} alt="Measured installer plan: edge lengths and pedestal centre-to-centre dimensions in millimetres"/></div><div className="measurement-zoom" role="group" aria-label="Measured plan zoom"><button type="button" aria-label="Zoom out measurements" disabled={planZoom===1} onClick={()=>setPlanZoom(z=>Math.max(1,z-.5))}>−</button><span>{Math.round(planZoom*100)}%</span><button type="button" aria-label="Zoom in measurements" disabled={planZoom===4} onClick={()=>setPlanZoom(z=>Math.min(4,z+.5))}>＋</button><button type="button" onClick={()=>setPlanZoom(1)}>Fit</button></div></>:<>
+    {measured?<InteractivePlan key={planRotation} src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(rotatePlanSvg(measured,planRotation))}`}/>:<>
     <svg className={`deck-svg ${layer==='3d'?`orbit-canvas ${orbiting?'is-orbiting':''}`:''}`} viewBox={view} role="img" aria-label={layer==='3d'?`3D deck view: ${activeLayer.label}. Rotation ${Math.round(rotation)} degrees, tilt ${Math.round(tilt)} degrees.`:layer==='frame'?plan.frame.layoutStatus==='ready'?'Checked framing and actual pedestal base footprints':'Unresolved draft framing and bearing positions, not for installation':'Deck boards with angled and tapered edge cuts inside the picture frame'} aria-describedby={layer==='3d'?`${id}-orbit-help`:undefined} tabIndex={layer==='3d'?0:undefined} onPointerDown={startOrbit} onPointerMove={moveOrbit} onPointerUp={endOrbit} onPointerCancel={endOrbit} onLostPointerCapture={()=>{drag.current=null;setOrbiting(false)}} onKeyDown={cameraKeys}>
       <defs>
         <pattern id={`${id}-grid`} width=".2" height=".2" patternUnits="userSpaceOnUse"><path d="M.2 0H0V.2" stroke="#bac7af" strokeWidth=".003" fill="none"/></pattern>
