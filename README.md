@@ -40,6 +40,8 @@ Stock cutting uses best-fit decreasing with entered saw kerf. It is a heuristic,
 
 ## Downloads & files
 
+The BetterPlan header uses a crisp vector mark and a serif wordmark with italic green “Plan”, following the supplied BetterDeck identity. Review groups the quotation and installation PDFs into separate download cards, with CSV report and format controls underneath. Mobile Review includes shortcuts to customer details, downloads and pricing; material rows become labelled cards so quantities, editable rates and subtotals remain visible. Step navigation follows the content without covering fields.
+
 Review contains the PDF and CSV downloads. Project import/backups live on Projects; catalogue import/backups live under Products → Import & backup. **Download quotation PDF** combines the former customer pack and quotation into one branded document with customer details, a 3D picture, itemised prices, delivery/VAT and a dimensioned layout; span reports are excluded. **Download plan PDF** provides the measured plan, coloured 3D supports, guide and applicable engineer references. The Excel pack is temporarily removed from the interface and production bundle. Seven CSV reports offer an optional styled preview before downloading. Each file is one rectangular table with one header, so filters and sorting work without mixing unrelated sections:
 
 - **Materials & pricing:** purchase quantities, stock dimensions, optional unit rates and line totals. The summary is either an entered-materials total or a known-priced subtotal; missing rates stay blank and zero prices remain valid.

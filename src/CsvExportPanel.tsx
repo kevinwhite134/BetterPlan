@@ -21,15 +21,17 @@ export default function CsvExport({plan,settings,prices,onDownload}:{plan:Plan;s
   const indices=columns.map(q=>report.headers.indexOf(q)),previewRows=(pricing?report.rows.filter(q=>q[0]==='Item'):report.rows).slice(0,8)
   const currency=new Intl.NumberFormat('en-IE',{style:'currency',currency:'EUR'}),rateCurrency=new Intl.NumberFormat('en-IE',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:4}),number=new Intl.NumberFormat('en-IE',{maximumFractionDigits:2})
   const customerPack=async()=>{setBusy(true);setError('');try{const [{exportCustomerQuotePack},{loadBetterDeckLogo},render,layout]=await Promise.all([import('./customerQuotePack'),import('./pdfBrand'),deckPreviewPng(deckSvg),deckPreviewPng(customerPlanSvg(plan,settings),1440,1000)]);const [logo,preview,planPreview]=await Promise.all([loadBetterDeckLogo(),fetch(render).then(r=>r.arrayBuffer()).then(b=>new Uint8Array(b)),fetch(layout).then(r=>r.arrayBuffer()).then(b=>new Uint8Array(b))]);const bytes=await exportCustomerQuotePack(plan,settings,prices,{logo,preview,planPreview});onDownload('betterdeck-quotation.pdf',Uint8Array.from(bytes).buffer,'application/pdf')}catch{setError('The quotation PDF could not be created. Please try again.')}finally{setBusy(false)}}
-  return <section className="csv-export" aria-labelledby="csv-export-title">
-    <div className="csv-export-heading"><div><h3 id="csv-export-title">PDFs &amp; CSV reports</h3></div><span className="export-file-tag">PDF + CSV</span></div>
-    <div className="csv-export-controls">
-      <Field label="CSV report"><select value={kind} onChange={e=>setKind(e.target.value as CsvKind)}>{CSV_REPORTS.map(q=><option key={q.id} value={q.id}>{q.label}</option>)}</select></Field>
-      <button type="button" className="button primary" disabled={busy} aria-busy={busy} onClick={customerPack}>{busy?'Creating quotation…':'↓ Download quotation PDF'}</button>
-      <InstallerPlanDownload plan={plan} settings={settings}/>
-      <button className="button secondary" disabled={!!report.unavailable||!report.rows.length} onClick={()=>onDownload(`betterplan-${kind}.csv`,serializeCsv(report,delimiter))}>↓ CSV report</button>
+  return <section className="csv-export" aria-label="PDF downloads and CSV reports">
+    <div className="pdf-downloads" aria-label="PDF downloads">
+      <div className="pdf-download-card"><span className="download-format" aria-hidden="true">PDF</span><h3 id="csv-export-title">Customer quotation</h3><p>Customer details, a 3D deck view, itemised prices and the deck layout.</p><button type="button" className="button primary" disabled={busy} aria-busy={busy} onClick={customerPack}>{busy?'Creating quotation…':'↓ Download quotation PDF'}</button></div>
+      <div className="pdf-download-card"><span className="download-format" aria-hidden="true">PDF</span><h3>Installation plan</h3><p>Measured drawing, colour-coded 3D supports and installation references.</p><InstallerPlanDownload plan={plan} settings={settings}/></div>
     </div>
     {error?<p className="csv-unavailable" role="alert">{error}</p>:null}
+    <div className="csv-report-heading"><h3>CSV reports</h3><p>Choose a materials report or cutting list for your spreadsheet.</p></div>
+    <div className="csv-export-controls">
+      <Field label="CSV report"><select value={kind} onChange={e=>setKind(e.target.value as CsvKind)}>{CSV_REPORTS.map(q=><option key={q.id} value={q.id}>{q.label}</option>)}</select></Field>
+      <button className="button secondary" disabled={!!report.unavailable||!report.rows.length} onClick={()=>onDownload(`betterplan-${kind}.csv`,serializeCsv(report,delimiter))}>↓ Download CSV</button>
+    </div>
     
     {report.unavailable?<p className="csv-unavailable" role="status">{report.unavailable}</p>:<details className="csv-preview"><summary>Preview selected report <span>{pricing?previewRows.length:report.rows.length} {pricing?'items':'rows'}</span></summary><div className="export-paper">
       <div className="paper-brand"><Brand name="BetterDeck"/><span>{kind==='quote'?'MATERIALS QUOTE':'DECK PLANNING'}</span></div>
@@ -43,6 +45,6 @@ export default function CsvExport({plan,settings,prices,onDownload}:{plan:Plan;s
       {pricing?<QuotationTotals estimate={quotationEstimate(plan,settings,prices)}/>:null}
       <p className="paper-scope">{pricing?QUOTATION_EXCLUSIONS:'All sizes and positions in millimetres. Refer to the project details for coordinate conventions.'} Provisional quantities. Applied fascia recess: {Math.round(plan.frame.fasciaClearance*1000)} mm. Maximum metal end projection: {Math.round(Math.max(0,...plan.frame.projections.map(q=>q.distance))*1000)} mm; supplier limits and connections require confirmation.</p>
     </div></details>}
-    <div className="csv-format-note"><p>Quotation: customer details, 3D view, itemised prices and deck layout. Plan: measured drawing, 3D supports and installation references. CSV: selected report.</p><ChoiceField<','|';'> label="CSV separator" ariaLabel="Column separator" value={delimiter} options={[{value:',',label:'Comma (,)'},{value:';',label:'Semicolon (;)'}]} onChange={setDelimiter}/></div>
+    <details className="csv-format-options"><summary>CSV format options</summary><ChoiceField<','|';'> label="CSV separator" ariaLabel="Column separator" value={delimiter} options={[{value:',',label:'Comma (,)'},{value:';',label:'Semicolon (;)'}]} onChange={setDelimiter}/></details>
   </section>
 }

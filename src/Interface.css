@@ -1,0 +1,183 @@
+/* Shared interface polish. Technical drawing and 3D material palettes live separately. */
+:root {
+  --ui-muted: #65715b;
+  --ui-border: #d5ddc9;
+  --ui-focus: #677c36;
+}
+
+.brand-lockup { gap: 11px; }
+.brand-mark { width: 36px; height: 36px; mix-blend-mode: normal; }
+.brand-name {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 38px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -1.4px;
+  color: #70664b;
+}
+.brand-name > span { font-weight: 400; font-style: italic; color: #69a910; }
+.brand { border-radius: 4px; }
+
+.button { min-height: 42px; border-radius: 6px; }
+.button.primary:hover { background: #515d25; }
+.button.secondary { background: #fff; }
+.button.secondary:hover { background: #f0f4e7; border-color: #acbc94; }
+.button.quiet:hover { background: #edf1e5; }
+button:disabled:hover { text-decoration: none; }
+.text-button { min-height: 32px; }
+.field { font-size: 12px; }
+.field small, .field-note, .section-heading p { color: var(--ui-muted); }
+.field input:not([type=checkbox]):not([type=radio]):not([type=color]),
+.field select, .field textarea { min-height: 42px; border-radius: 6px; }
+.field textarea, .quotation-settings textarea { font-family: inherit; }
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 2px;
+}
+.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+.setting-heading { font-size: 12px; }
+.setting-info-button { width: 22px; height: 22px; }
+.setting-info-button:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.choice-control button { min-height: 38px; }
+.guided-steps button { border-radius: 6px 6px 0 0; color: var(--ui-muted); }
+.guided-steps button:hover { background: #edf1e4; }
+.guided-steps button.active { background: #eaf0db; border-color: #778d42; }
+.guided-steps button.active > span { background: #626c2c; border-color: #626c2c; color: white; }
+.flow-navigation { position: static; box-shadow: none; padding: 16px 0; border: 0; background: transparent; }
+.flow-navigation .primary { margin-left: auto; }
+.editor-project-name { border: 1px solid transparent; min-height: 38px; }
+.editor-project-name:hover { border-color: var(--ui-border); background: #fff; }
+.editor-project-name:focus { border-color: #96aa75; outline: 2px solid #96aa7540; }
+.saved-indicator { color: var(--ui-muted); }
+.saved-indicator.project-saving-error i { background: #a26543; }
+.quotation-settings p, .quotation-settings label > span { color: var(--ui-muted); }
+.quotation-settings input, .quotation-settings textarea { min-height: 42px; }
+.site-footer { color: #6d7862; line-height: 1.6; gap: 16px; }
+.review-jumps { display: none; }
+#project-downloads, #materials-pricing, #quotation-details-title { scroll-margin-top: 20px; }
+
+.project-home-heading p { font-size: 14px; color: var(--ui-muted); line-height: 1.6; }
+.project-sidebar nav > button { font-size: 13px; min-height: 44px; }
+.project-sidebar nav > button > span { font-size: 11px; color: var(--ui-muted); }
+.project-sidebar h2 { font-size: 10px; color: var(--ui-muted); }
+.new-project-section > label { font-size: 12px; color: var(--ui-muted); }
+.new-project-section input, .section-edit input { min-height: 42px; font-size: 13px; }
+.new-project-section button { min-width: 40px; }
+.project-local-note { font-size: 12px; color: var(--ui-muted); line-height: 1.7; }
+.project-list-heading input { min-height: 42px; font-size: 13px; }
+.project-card { transition: border-color .15s, box-shadow .15s; }
+.project-card:focus-within { border-color: #9db47a; }
+.project-card:hover { border-color: #bccba8; box-shadow: 0 5px 18px #30422608; }
+.project-card-title { align-items: center; }
+.project-card-title .text-button { font-size: 12px; color: #586a40; padding-left: 3px; }
+.project-card-title h2 { font-size: 18px; line-height: 1.4; }
+.project-card-body > p { font-size: 12px; color: var(--ui-muted); }
+.project-section-choice { font-size: 12px; color: var(--ui-muted); }
+.project-section-choice select { min-height: 38px; font-size: 12px; }
+.project-image > span { font-size: 11px; }
+.project-card-actions .button, .project-card-actions .text-button { font-size: 12px; }
+.project-card-actions { flex-wrap: wrap; }
+.project-rename input { min-height: 42px; }
+.section-edit summary { font-size: 12px; color: var(--ui-muted); }
+.project-empty p { font-size: 13px; color: var(--ui-muted); margin-top: 10px; }
+
+.review-files > header p { font-size: 13px; color: var(--ui-muted); }
+.pdf-downloads { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.pdf-download-card { display: flex; flex-direction: column; align-items: flex-start; padding: 20px; border: 1px solid var(--ui-border); border-radius: 8px; background: #fafbf7; }
+.download-format { padding: 4px 7px; font-size: 10px; letter-spacing: 1px; font-weight: 600; color: #647445; border: 1px solid #d8e0c9; border-radius: 4px; background: white; margin-bottom: 14px; }
+.pdf-download-card h3 { font-size: 16px; font-weight: 600; line-height: 1.4; margin: 0; }
+.pdf-download-card p { font-size: 13px; line-height: 1.7; color: var(--ui-muted); margin: 8px 0 18px; }
+.pdf-download-card > .button, .pdf-download-card > .installer-download { margin-top: auto; }
+.pdf-download-card .button { min-height: 44px; font-size: 12px; padding: 11px 14px; }
+.review-files .installer-download { display: block; }
+.review-files .installer-download .button { height: auto; }
+.installer-download-note { display: block; font-size: 12px; line-height: 1.6; color: var(--ui-muted); margin-top: 10px; }
+.csv-report-heading { margin: 24px 0 16px; padding-top: 22px; border-top: 1px solid #e1e6d8; }
+.csv-report-heading h3 { font-size: 15px; font-weight: 600; margin: 0 0 6px; }
+.csv-report-heading p { font-size: 13px; line-height: 1.6; color: var(--ui-muted); }
+.review-files .csv-export-controls { display: flex; align-items: flex-end; gap: 12px; }
+.review-files .csv-export-controls > .field { flex: 1; }
+.review-files .csv-export-controls > .button { min-height: 42px; flex-shrink: 0; }
+.csv-format-options { margin-top: 16px; }
+.csv-format-options > summary { color: var(--ui-muted); font-size: 12px; }
+.csv-format-options > .field { max-width: 280px; margin: 16px 0 0; }
+.csv-preview > summary { font-size: 12px; }
+.library-header p, .library-footer, .product-card > p, .library-editor .field-note { color: var(--ui-muted); }
+.library-footer, .product-card-heading small { font-size: 12px; }
+.product-card-bottom .button { min-height: 38px; font-size: 12px; }
+
+@media (max-width: 1050px) {
+  .pdf-downloads { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+  .brand-mark { width: 31px; height: 31px; }
+  .brand-lockup { gap: 9px; }
+  .brand-name { font-size: 33px; letter-spacing: -1.1px; }
+  .app-shell { padding-right: 18px; padding-left: 18px; }
+  .button, .choice-control button { min-height: 44px; }
+  .topbar .header-actions { gap: 10px; }
+  .topbar .saved-indicator { display: flex; margin-right: 0; }
+  .project-editor .topbar { height: auto; min-height: 110px; flex-wrap: wrap; gap: 10px 6px; padding: 15px 0; }
+  .project-editor .topbar .header-actions { display: contents; }
+  .project-editor .topbar .saved-indicator { order: 1; margin-left: auto; }
+  .project-editor .topbar .products-button { order: 2; }
+  .project-editor .editor-project-title { gap: 10px; order: 3; flex: 1 0 100%; }
+  .editor-project-title .text-button { min-height: 40px; }
+  .project-editor .editor-project-name { border-color: var(--ui-border); background: #fff; max-width: none; }
+  .field input:not([type=checkbox]):not([type=radio]):not([type=color]),
+  .field select, .field textarea, .quotation-settings input, .quotation-settings textarea { font-size: 16px; min-height: 44px; }
+  .library-list .field select, .library-editor .field select, .library-editor .field textarea { font-size: 16px; }
+  .setting-info-button { width: 28px; height: 28px; }
+  .review-files .csv-export-controls > .field { flex: initial; }
+  .project-home-heading { gap: 20px; }
+  .project-home-heading > div:last-child { width: 100%; }
+  .project-home-heading > div:last-child > .button { flex: 1; }
+  .project-list-heading { flex-direction: column; align-items: stretch; gap: 14px; }
+  .project-list-heading input { max-width: none; width: 100%; font-size: 16px; min-height: 44px; }
+  .project-sidebar nav > button { padding: 10px 13px; }
+  .project-card-actions .button, .project-card-actions .text-button { min-height: 44px; }
+  .project-section-choice select, .new-project-section input, .section-edit input, .project-rename input, .new-project-form input, .new-project-form select { font-size: 16px; min-height: 44px; }
+  .project-home-heading h1 { margin-top: 8px; }
+  .pdf-download-card { padding: 18px; }
+  .pdf-download-card > .button, .pdf-download-card > .installer-download, .pdf-download-card .installer-download .button { width: 100%; }
+  .review-files .csv-export-controls { flex-direction: column; align-items: stretch; }
+  .review-files .csv-export-controls > .button { width: 100%; }
+  .flow-navigation { gap: 12px; padding: 12px 0; }
+  .flow-navigation .button { min-height: 44px; font-size: 12px; }
+  .review-jumps { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+  .review-jumps a { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 8px 12px; border: 1px solid var(--ui-border); border-radius: 20px; background: #fff; font-size: 12px; text-decoration: none; }
+  .review-jumps a:hover { background: #edf1e4; }
+  .review-content .materials-table { display: block; width: 100%; min-width: 0; }
+  .materials-table thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .materials-table tbody { display: grid; gap: 14px; }
+  .materials-table tbody tr { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 16px; border: 1px solid var(--ui-border); border-radius: 8px; background: white; padding: 16px; }
+  .review-content .materials-table tbody td { display: block; border: 0; padding: 0; text-align: left; min-width: 0; }
+  .review-content .materials-table td:first-child { grid-column: 1 / -1; width: auto; }
+  .review-content .materials-table td strong { font-size: 13px; line-height: 1.6; }
+  .review-content .materials-table td small { font-size: 11px; line-height: 1.7; color: var(--ui-muted); }
+  .materials-table td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 8px; font-size: 11px; color: var(--ui-muted); font-weight: 400; }
+  .review-content .materials-table td:last-child { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 12px; border-top: 1px solid #e4e9dc; padding-top: 12px; font-size: 14px; }
+  .materials-table td:last-child::before { margin: 0; }
+  .review-content .materials-table td input { width: 100%; min-width: 0; min-height: 44px; font-size: 16px; }
+  .materials-table .rate-input { display: flex; gap: 6px; }
+  .materials-table .rate-input > .text-button { flex: none; min-width: 28px; min-height: 44px; font-size: 20px; }
+  .site-footer { flex-wrap: wrap; font-size: 11px; }
+}
+
+@media (max-width: 420px) {
+  .brand-name { font-size: 30px; }
+  .brand-mark { width: 28px; height: 28px; }
+  .brand-lockup { gap: 8px; }
+  .library-list-tools { grid-template-columns: 1fr; }
+  .library-add > div { display: grid; grid-template-columns: 1fr; }
+  .library-add .button { font-size: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}
