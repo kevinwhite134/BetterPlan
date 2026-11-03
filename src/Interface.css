@@ -5,12 +5,16 @@
 .interactive-plan:focus-visible { outline: 2px solid #677c36; outline-offset: -2px; }
 .interactive-plan-hint { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); padding: 5px 9px; border-radius: 5px; background: #ffffffdf; font-size: 10px; color: #65715b; white-space: nowrap; pointer-events: none; }
 .measurement-zoom button { min-height: 36px; min-width: 42px; }
-.support-views { display: grid; grid-template-columns: minmax(0,1fr) 140px; align-items: center; gap: 12px; padding-right: 18px; }
+.support-views { display: grid; grid-template-columns: minmax(0,1fr) 156px; align-items: center; gap: 12px; padding-right: 18px; }
 .support-views > .deck-view { min-width: 0; }
 .support-view-rail { display: flex; flex-direction: column; gap: 10px; padding: 18px 0; }
-.support-view-rail .layer-card { width: 100%; }
-.support-view-rail .layer-card-picture { position: relative; }
-.support-measure-preview { position: absolute; bottom: 3px; left: 0; width: 100%; text-align: center; font-size: 11px; color: #526837; background: #f7f8eddb; }
+.support-view-rail .layer-card { width: 100%; padding: 8px; border-radius: 10px; }
+.support-view-rail .layer-card-picture { height: 88px; background: #f0f4e8; border: 1px solid #e4eadb; }
+.support-view-rail .layer-card-picture svg { padding: 0; }
+.support-view-rail .layer-card-label { padding: 10px 2px 3px; font-size: 12px; font-weight: 600; color: #425534; }
+.support-view-note { display: block; padding: 0 2px 3px; font-size: 10px; line-height: 1.5; color: #65715b; }
+.support-view-rail .support-view-check { display: flex; align-items: center; justify-content: center; width: 17px; height: 17px; flex: none; border-radius: 50%; color: #fff; }
+.support-view-rail .selected .support-view-check { background: #608448; }
 @media(max-width:760px) {
   .support-views { display: flex; flex-direction: column-reverse; align-items: stretch; padding-right: 0; gap: 0; }
   .support-view-rail { flex-direction: row; padding: 12px 16px; gap: 10px; }
