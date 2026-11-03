@@ -8,19 +8,17 @@
 .support-views { display: grid; grid-template-columns: minmax(0,1fr) 156px; align-items: center; gap: 12px; padding-right: 18px; }
 .support-views > .deck-view { min-width: 0; }
 .support-view-rail { display: flex; flex-direction: column; gap: 10px; padding: 18px 0; }
-.support-view-rail .layer-card { width: 100%; padding: 8px; border-radius: 10px; }
-.support-view-rail .layer-card-picture { height: 88px; background: #f0f4e8; border: 1px solid #e4eadb; }
-.support-view-rail .layer-card-picture svg { padding: 0; }
-.support-view-rail .layer-card-label { padding: 10px 2px 3px; font-size: 12px; font-weight: 600; color: #425534; }
-.support-view-note { display: block; padding: 0 2px 3px; font-size: 10px; line-height: 1.5; color: #65715b; }
-.support-view-rail .support-view-check { display: flex; align-items: center; justify-content: center; width: 17px; height: 17px; flex: none; border-radius: 50%; color: #fff; }
-.support-view-rail .selected .support-view-check { background: #608448; }
+.support-view-rail .layer-card { width: 100%; padding: 14px 10px; border-radius: 10px; color: #7a886a; box-shadow: none; }
+.support-view-rail .layer-card.selected { color: #4c7138; box-shadow: inset 0 0 0 1px #608448; }
+.support-view-rail .layer-card-picture { height: 48px; justify-content: center; align-items: center; background: none; border: 0; }
+.support-view-rail .layer-card-picture .support-view-icon { width: 64px; height: 48px; padding: 0; }
+.support-view-rail .layer-card-label { justify-content: center; padding: 10px 0 0; font-size: 12px; font-weight: 600; color: #425534; }
 @media(max-width:760px) {
   .support-views { display: flex; flex-direction: column-reverse; align-items: stretch; padding-right: 0; gap: 0; }
   .support-view-rail { flex-direction: row; padding: 12px 16px; gap: 10px; }
   .support-view-rail > .layer-rail-title { display: none; }
   .support-view-rail .layer-card { flex: 1; min-width: 0; }
-  .support-view-rail .layer-card-picture { height: 64px; }
+  .support-view-rail .layer-card-picture { height: 48px; }
 }
 :root {
   --ui-muted: #65715b;

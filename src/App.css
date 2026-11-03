@@ -249,17 +249,17 @@
 
 .plan-rotation{display:flex;align-items:center;gap:.55rem;justify-content:flex-end;padding:.65rem 1rem;color:#526548;font-size:.8rem}.plan-rotation>span:first-child{margin-right:.3rem}.plan-rotation button{border:1px solid #d5ddc8;border-radius:7px;padding:.35rem .65rem;background:#f9faf5;color:#43552d;cursor:pointer}.plan-rotation button:disabled{opacity:.4;cursor:default}.measurement-diagram{display:block;width:100%;max-width:320px;margin:0 auto .7rem}.measurement-diagram text{font:10px Arial,sans-serif;fill:#46573c;text-anchor:middle}.setting-help .measurement-diagram{max-height:165px}
 .field-grid>.field:has(>.setting-help:not([hidden])){grid-column:1/-1}.measurement-diagram text{font-size:12px}
-/* Breaker editor: a steady canvas, persistent stock loss and one selected guide. */
+/* Boards and breaker controls share the page scroll with step navigation. */
 .betterdeck-logo{display:block;width:165px;height:auto;max-height:105px;object-fit:contain}.part-label-toggle{display:flex;align-items:center;gap:6px;font-size:11px;color:#526747;cursor:pointer}.part-label-toggle input{accent-color:#698d36}.deck-part-labels text{font-family:Arial,sans-serif;font-weight:600}.exposure-caption{flex-wrap:wrap}
 @media(min-width:761px){
   .stage-boards.flow-workspace{overflow:visible;align-items:start}
-  .stage-boards.flow-workspace>.flow-canvas{position:sticky;top:12px;align-self:start;max-height:calc(100dvh - 35px);overflow:auto;overscroll-behavior:contain;border-radius:0 7px 7px 0;scrollbar-gutter:stable}
+  .stage-boards.flow-workspace>.flow-canvas{position:static;align-self:stretch;max-height:none;overflow:visible;overscroll-behavior:auto;border-radius:0 7px 7px 0}
   .stage-boards.flow-workspace>.settings-panel{border-radius:7px 0 0 7px}
   .stage-boards.flow-workspace .plan-stage{height:clamp(240px,calc(100dvh - 360px),440px)}
 }
 @media(max-width:760px){
   .stage-boards.flow-workspace{overflow:visible}
-  .stage-boards.flow-workspace>.flow-canvas{order:0;position:sticky;top:0;z-index:6;max-height:43dvh;overflow:auto;overscroll-behavior:contain;border-bottom:1px solid #d5dfc7;box-shadow:0 5px 18px #344b3714}
+  .stage-boards.flow-workspace>.flow-canvas{order:0;position:static;max-height:none;overflow:visible;overscroll-behavior:auto;border-bottom:1px solid #d5dfc7}
   .stage-boards.flow-workspace>.settings-panel{order:1}
   .stage-boards.flow-workspace .plan-stage{height:clamp(130px,24dvh,240px)}
   .stage-boards .stage-canvas-header{padding:10px 14px}.stage-boards .view-legend{display:none}.stage-boards .fit-card{margin:8px;padding:8px 12px}.stage-boards .fit-card h3{font-size:12px}.stage-boards .fit-card p{font-size:10px;margin:4px 0}.stage-boards .plan-rotation{padding:6px 12px}
