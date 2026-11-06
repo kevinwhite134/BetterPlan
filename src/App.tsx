@@ -1,4 +1,6 @@
 import SupportViews from './SupportViews'
+import PhotoCoordinates from './PhotoCoordinates'
+import { parseOutlineCoordinates } from './outlineCoordinates'
 import ProjectLibrary from './ProjectHome'
 import ReviewFiles from './ReviewFiles'
 import { useProjectWorkspace } from './useProjectWorkspace'
@@ -68,7 +70,7 @@ function ShapeEditor({settings,onChange}: {settings:Settings;onChange:(p:Point[]
     <div className="field-grid"><Field label="Overall width" unit="m"><Numeric value={width} onChange={setWidth} min={.3} max={MAX_PROJECT_SIZE} step={.1}/></Field><Field label="Overall depth" unit="m"><Numeric value={depth} onChange={setDepth} min={.3} max={MAX_PROJECT_SIZE} step={.1}/></Field></div>
     {shape==='l'||shape==='u'?<div className="field-grid"><Field label="Cut-out width" unit="m"><Numeric value={notchW} onChange={setNotchW} min={.1} step={.1}/></Field><Field label="Cut-out depth" unit="m"><Numeric value={notchD} onChange={setNotchD} min={.1} step={.1}/></Field></div>:null}
     <button className="button primary full" onClick={preset}>Apply outline <span><OpenIcon/></span></button>
-    <section className="custom-outline" aria-labelledby="custom-outline-title"><h3 id="custom-outline-title">Custom outline / edit corners</h3><p>One x, y pair per line in metres, in boundary order. Add internal openings in Cutouts below.</p><Field label="Corner coordinates"><textarea rows={8} placeholder="Paste coordinates here…" value={text} onChange={e=>setText(e.target.value)} spellCheck={false}/></Field><button className="button secondary full" disabled={!text.trim()} onClick={()=>apply(text.trim().split(/\n/).map(line=>{const a=line.trim().split(/[,\s]+/);return{x:a.length===2?Number(a[0]):NaN,y:a.length===2?Number(a[1]):NaN}}))}>Apply corners</button></section>
+    <section className="custom-outline" aria-labelledby="custom-outline-title"><h3 id="custom-outline-title">Custom outline / edit corners</h3><p>One x, y pair per line in metres, in boundary order. Add internal openings in Cutouts below.</p><PhotoCoordinates onInsert={coordinates=>{setText(coordinates);setError('')}}/><Field label="Corner coordinates"><textarea rows={8} placeholder="Paste coordinates here…" value={text} onChange={e=>setText(e.target.value)} spellCheck={false}/></Field><button className="button secondary full" disabled={!text.trim()} onClick={()=>apply(parseOutlineCoordinates(text))}>Apply corners</button></section>
     {error?<p className="error" role="alert">{error}</p>:null}</>
 }
 function BoardEditor({settings:s,onChange,products,onApply,onManage,onSaveCurrent,onEditBreakers}: {settings:Settings;onChange:(s:Settings)=>void;products:LibraryProduct[];onApply:(p:LibraryProduct)=>void;onManage:()=>void;onSaveCurrent:()=>void;onEditBreakers:()=>void}) {

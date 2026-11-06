@@ -1,4 +1,15 @@
 /* Shared interface polish. Technical drawing and 3D material palettes live separately. */
+.photo-coordinates { margin: 14px 0; }
+.photo-coordinates section { margin-top: 12px; padding: 14px; border: 1px solid var(--ui-border); border-radius: 6px; background: #f5f7ef; }
+.photo-coordinates p { font-size: 12px; line-height: 1.6; margin: 0 0 12px; }
+.photo-coordinates .field { margin-top: 16px; }
+.photo-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.photo-actions .button { flex: 1 1 110px; }
+.photo-filename { overflow-wrap: anywhere; }
+.photo-coordinates textarea { font-family: monospace; }
+.photo-spinner { display: inline-block; width: 14px; height: 14px; margin-right: 8px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: photo-spin 1s linear infinite; }
+@keyframes photo-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .photo-spinner { animation: none; } }
 .custom-outline > h3 { font-size: 14px; font-weight: 500; line-height: 1.6; margin: 0; }
 .custom-outline textarea::placeholder { color: #849079; opacity: 1; }
 .measured-plan-window.interactive-plan { position: relative; overflow: hidden; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }

@@ -1,6 +1,6 @@
 # BetterDeck Planner
 
-A browser-based React + TypeScript deck concept planner. Run with Node 22.6+:
+A browser-based React + TypeScript deck concept planner, built with Vite. Photo analysis uses a small Node backend. Run with Node 22.12+:
 
 ```sh
 npm install
@@ -9,6 +9,22 @@ npm test
 npm run build
 npm run lint
 ```
+
+## AI Photo to Coordinates
+
+In **Shape → Custom outline / edit corners**, choose **AI Photo to Coordinates**, then **Take photo** (native rear camera on supported phones) or **Upload image**. Choose **Analyse image** to generate a rough perimeter. **Copy Coordinates** copies the result; **Insert into coordinates** fills the existing Corner coordinates field. **Apply corners** applies it using the same validation as manual entry, including checks against existing cutouts. Photos and generated results are temporary and are not added to saved projects; only an applied outline is saved.
+
+Copy `.env.example` to `.env` and set `OPENAI_API_KEY` on the server. Restart the dev server after changing it. `OPENAI_VISION_MODEL` is optional and defaults to `gpt-4.1-mini`; a replacement must support vision and strict JSON schema output in the Responses API. Never use a `VITE_` prefix for secrets. Vite loads the key only in its Node middleware, not the browser bundle. The backend uses Node's native `fetch`, so no OpenAI SDK or additional package is required. API format references: [vision inputs](https://developers.openai.com/api/docs/guides/images-vision) and [structured output](https://developers.openai.com/api/docs/guides/structured-outputs).
+
+`npm run dev` serves both the interface and `/api/photo-to-coordinates` from the same origin; `npm run preview` also includes the API. **On Vercel**, deploy this repository with `vercel.json`: Vite builds the interface to `dist/`, and `api/photo-to-coordinates.ts` deploys the shared backend as a Node Function using the standard Request/Response API. The function reads `process.env.OPENAI_API_KEY` at runtime. Set that variable in the Vercel environment you deploy (Production, and Preview if needed), then redeploy after changing it. No extra secret, SDK, storage service or separate backend host is required. The function has a 90-second duration allowance, with a shorter 60-second timeout on the OpenAI call. Do not deploy only `dist/`, which excludes the API. Use HTTPS on deployed phone/desktop URLs for clipboard and browser camera capabilities.
+
+For other Node hosts, run `npm run build` then `npm start`: the standalone server serves `dist/` and the API at `127.0.0.1:3000`. Optional server variables are `HOST` and `PORT`; set `HOST=0.0.0.0` when required by your host. These are not needed on Vercel. `npm start` loads `.env` if present; deployment environment variables also work.
+
+The small `api/tsconfig.json` extends the existing Node compiler settings and rewrites relative TypeScript imports to JavaScript for the packaged function. This is needed because Vercel's function builder does not follow the Vite app's TypeScript project references. The regular `npm run build` also type-checks `api/` through `tsconfig.node.json`.
+
+Users can select JPEG, PNG and WebP photos up to 10 MiB. The browser validates and decodes them before sending; photos above 4 MiB are reduced to a JPEG with a maximum 2048-pixel dimension. Binary API uploads are capped at 4 MiB, below [Vercel's 4.5 MB request limit](https://vercel.com/docs/functions/limitations#request-body-size), with server-side MIME, file-signature and streaming size checks. HEIC photos must first be exported as JPEG. The AI service also validates its image input. Photographs stay in request memory, are sent to OpenAI as inline image data, and are never written to disk. Responses use `store: false` and `Cache-Control: no-store`; this does not override OpenAI's service-side data retention policies. Best-effort per-instance limits permit two simultaneous analyses and ten upload attempts per network address per ten minutes. The Vercel entry point uses the platform-supplied `x-real-ip`; the standalone Node adapter uses the socket address and ignores forwarded headers. These in-memory limits do not coordinate across autoscaled instances. Configure any deployment access controls at your hosting boundary, as this local-first planner has no user authentication. Errors cover missing configuration, unsupported/oversized images, upstream limits/failures, timeouts, refusals and invalid outlines. Automated tests mock OpenAI, including tests through the actual Vercel entry point; no live API calls are required.
+
+Coordinates use **metres, X right, Y down**, consecutive boundary order, one `x, y` pair per line and no repeated closing vertex. Only a translation to minimum X/Y zero and millimetre rounding are performed: vertex order, rotation and handedness are preserved. The bounding-box origin need not be a corner. The server requests a top-down interpretation with the photographed far side at the top and near side at the bottom. Perspective and hidden edges make these rough AI estimates; check shape, orientation and dimensions before applying. Validation reuses the actual current planner limits (3–128 vertices, 100 m in each direction, minimum 0.1 m² area and 5 mm edges), rejecting self-intersections and malformed values. It does not guarantee that subsequent board/support calculations can resolve every valid outline.
 
 ## Guided workflow
 
