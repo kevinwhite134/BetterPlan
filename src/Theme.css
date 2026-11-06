@@ -69,7 +69,6 @@ html[data-theme="dark"] .app-shell :is(.frame-option .no-fit, .frame-option .fra
 html[data-theme="dark"] :is(.selected-frame-system.needs-review, .audit-checks > div.fail, .pedestal-survey .survey-outside) { color: #ffd4b8; background: #482f23; border-color: #916244; }
 html[data-theme="dark"] .app-shell :is(.height-result.mismatch span, .height-result.mismatch p) { color: #ffd4b8; }
 html[data-theme="dark"] .deck-view.perspective { background: radial-gradient(ellipse at center, #46533c 0%, transparent 65%); }
-html[data-theme="dark"] .deck-view .deck-svg g[fill="#617155"] { fill: #b3bfaa; }
 html[data-theme="dark"] :is(.support-tool-grid button, .support-editor-toolbar button) { color: #dbe6cf; background: #253024; border-color: #54614b; }
 html[data-theme="dark"] .support-tool-grid button[aria-pressed="true"] { background: #3c4b30; border-color: #9caf74; }
 html[data-theme="dark"] :is(.support-live-check.passes, .support-setting-options article, .product-library .library-form-actions, .library-feedback:not(.error)) { color: #e4e9df; background: #29342a; }
