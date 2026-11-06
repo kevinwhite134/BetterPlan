@@ -31,7 +31,7 @@ test('automatic choice fits frame and pedestal around the fixed customer height 
 })
 
 test('an unsuitable pedestal can be replaced by a listed product instead of changing customer height or ground variation',()=>{
-  const settings={...DEFAULT_SETTINGS,height:280,pedestalName:'VersiJack F1 Pedestal',pedestalMin:37,pedestalMax:50,pedestalDiameter:190},chosen=selectAutomaticFrame(settings)
+  const settings={...DEFAULT_SETTINGS,variation:20,height:280,pedestalName:'VersiJack F1 Pedestal',pedestalMin:37,pedestalMax:50,pedestalDiameter:190},chosen=selectAutomaticFrame(settings)
   assert.equal(chosen.height,280);assert.equal(chosen.variation,20)
   assert.ok(chosen.frame==='big'||chosen.frame==='big-small');assert.equal(chosen.pedestalName,'VersiJack F4 Pedestal')
   const model=PEDESTAL_MODELS.find(p=>p.name===chosen.pedestalName)!
@@ -53,7 +53,7 @@ test('height alone never approves a frame whose support geometry fails on a shap
 })
 
 test('no matching option retains the supplied height, variation, board and product limits without inventing a solution',()=>{
-  const settings={...DEFAULT_SETTINGS,height:70},result=recommendFrames(settings),applied=selectAutomaticFrame(settings)
+  const settings={...DEFAULT_SETTINGS,variation:20,height:70},result=recommendFrames(settings),applied=selectAutomaticFrame(settings)
   assert.equal(result.selected,null);assert.ok(result.options.every(o=>o.choice===null&&o.reason.length>0))
   assert.equal(applied.height,70);assert.equal(applied.variation,20)
   assert.equal(applied.pedestalMin,settings.pedestalMin);assert.equal(applied.pedestalMax,settings.pedestalMax)

@@ -15,7 +15,7 @@ test('the shared height check gives the same required adjustment and result as t
 })
 
 test('too-low and too-high checks explain failure without suggesting a change to customer height',()=>{
-  const settings={...DEFAULT_SETTINGS,frame:'small-small' as const,height:70},rule=frameRule(settings.frame,settings.load),low=heightFit(settings,rule)
+  const settings={...DEFAULT_SETTINGS,variation:20,frame:'small-small' as const,height:70},rule=frameRule(settings.frame,settings.load),low=heightFit(settings,rule)
   assert.equal(low.status,'too-low');assert.deepEqual(low.required,{min:-45,max:-5});assert.deepEqual(low.total,{min:150,max:325})
   assert.equal(settings.height,70,'customer height is never replaced by a suggested height')
   const high=heightFit({...settings,height:400},rule)

@@ -76,7 +76,7 @@ test('primary support gaps are measured along each member orientation',()=>{
 })
 
 test('height range uses one consistent primary support elevation',()=>{
-  const p=planDeck(settings());close(p.range.min,90);close(p.range.max,130);assert.equal(p.heightFits,true)
+  const p=planDeck(settings({variation:20}));close(p.range.min,90);close(p.range.max,130);assert.equal(p.heightFits,true)
   assert.equal(planDeck(settings({height:100})).heightFits,false)
 })
 test('invalid numeric values and imported enums are rejected before calculation',()=>{

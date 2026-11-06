@@ -8,7 +8,7 @@ import { buildCsvReport } from '../src/csvExport.ts'
 import { createDeckWorkbook } from '../src/workbookExport.ts'
 
 test('default stock rates use net euro prices per purchased item, not gross or per-metre amounts',()=>{
-  const {rates}=defaultPricing(DEFAULT_SETTINGS)
+  const {rates}=defaultPricing({...DEFAULT_SETTINGS,variation:20})
   assert.deepEqual(rates,{boards:'35.51',profile35:'28.23',profile80:'33.87',pedestals:'11.21',skirting:'48.04',clips:'0.60',continuousJoiners:'1.68',joistJoiners:'1.20',perpendicularJoiners:'1.20'})
 })
 
@@ -18,7 +18,7 @@ test('published pedestal models use their own single-unit rate with Dutch VAT re
     const s={...DEFAULT_SETTINGS,pedestalName:model.name,pedestalMin:model.min,pedestalMax:model.max,pedestalDiameter:model.diameter}
     if(expected[model.name])assert.equal(defaultPricing(s).rates.pedestals,expected[model.name])
   }
-  const renamed={...DEFAULT_SETTINGS,pedestalName:'VersiJack F3 Pedestal'}
+  const renamed={...DEFAULT_SETTINGS,variation:20,pedestalName:'VersiJack F3 Pedestal'}
   assert.equal(defaultPricing(renamed).rates.pedestals,'11.21','a custom size must not silently inherit an incompatible named model rate')
 })
 

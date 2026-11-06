@@ -8,7 +8,7 @@ const f1={pedestalName:'VersiJack F1 Pedestal',pedestalMin:37,pedestalMax:50,ped
 const f4={pedestalName:'VersiJack F4 Pedestal',pedestalMin:117,pedestalMax:201,pedestalDiameter:205}
 
 test('automatic mode chooses a real catalogue model rather than preserving a broad custom placeholder',()=>{
-  const input={...DEFAULT_SETTINGS,height:250},before=JSON.stringify(input),chosen=selectAutomaticFrame(input),model=PEDESTAL_MODELS.find(p=>p.name===chosen.pedestalName)
+  const input={...DEFAULT_SETTINGS,variation:20,height:250},before=JSON.stringify(input),chosen=selectAutomaticFrame(input),model=PEDESTAL_MODELS.find(p=>p.name===chosen.pedestalName)
   assert.ok(model);assert.equal(chosen.pedestalName,'VersiJack F4 Pedestal');assert.equal(chosen.frame,'big')
   assert.equal(chosen.pedestalMin,model.min);assert.equal(chosen.pedestalMax,model.max);assert.equal(chosen.pedestalDiameter,model.diameter)
   assert.equal(chosen.height,250);assert.equal(chosen.variation,20);assert.equal(planDeck(chosen).heightFits,true)
@@ -50,12 +50,12 @@ test('automatic pedestal mode recovers from incomplete custom limits; manual inp
 })
 
 test('no catalogue model means no automatic choice; neither customer height nor a manual frame is altered',()=>{
-  const input={...DEFAULT_SETTINGS,frameSelection:'manual' as const,pedestalSelection:'auto' as const,frame:'big-small' as const,height:250}
+  const input={...DEFAULT_SETTINGS,variation:20,frameSelection:'manual' as const,pedestalSelection:'auto' as const,frame:'big-small' as const,height:250}
   const result=recommendFrames(input),chosen=selectAutomaticFrame(input)
   assert.equal(result.options.find(o=>o.frame===input.frame)!.choice,null)
   assert.equal(chosen.frame,input.frame);assert.equal(chosen.height,input.height);assert.equal(chosen.variation,input.variation)
   assert.equal(chosen.pedestalSelection,'auto')
-  const impossible={...DEFAULT_SETTINGS,height:70}
+  const impossible={...DEFAULT_SETTINGS,variation:20,height:70}
   assert.equal(recommendFrames(impossible).selected,null);assert.equal(selectAutomaticFrame(impossible).height,70)
 })
 
