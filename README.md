@@ -30,6 +30,8 @@ Coordinates use **metres, X right, Y down**, consecutive boundary order, one `x,
 
 ## Guided workflow
 
+The header's **Dark mode** toggle switches the interface theme and remembers the choice in this browser. On the first visit it follows the device's colour preference. The saved theme is applied before the app loads. Quotation totals separate the euro symbol from the digits, use tabular numbers and allow labels and amounts to wrap onto separate lines on narrow screens.
+
 One progress sequence replaces the separate step and view tab bars:
 
 1. **Shape** — rectangle/L/U/angled templates, coordinate entry or click-to-draw editing. Drag, insert/delete and nudge corners; set exact edge lengths, bearings and interior angles. Grid/angle snapping and draft undo/redo are available. Apply or revert a draft before leaving the step.

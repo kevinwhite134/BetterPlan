@@ -1,0 +1,90 @@
+:root { color-scheme: light; }
+.theme-toggle { flex-shrink: 0; gap: 7px; white-space: nowrap; }
+.theme-toggle svg { flex-shrink: 0; }
+.currency-amount { display: inline-flex; align-items: baseline; gap: .14em; white-space: nowrap; font-variant-numeric: tabular-nums; font-kerning: none; letter-spacing: normal; line-height: 1.45; }
+.currency-symbol { flex-shrink: 0; }
+.quotation-totals > div { flex-wrap: wrap; gap: 8px 18px; align-items: baseline; }
+.quotation-totals dd { margin-left: auto; max-width: 100%; letter-spacing: normal; font-variant-numeric: tabular-nums; }
+.estimate-total > b, .paper-total strong { letter-spacing: normal; font-kerning: none; font-variant-numeric: tabular-nums; }
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  color: #e4e9df;
+  background: #171d18;
+  --ui-muted: #b3bfaa;
+  --ui-border: #465140;
+  --ui-focus: #b6cf79;
+}
+html[data-theme="dark"] body { background: #171d18; }
+html[data-theme="dark"] ::selection { color: #131b12; background: #b6cf79; }
+html[data-theme="dark"] :where(input, select, textarea) { color: #e4e9df; }
+
+/* Surface colours are scoped to interface containers, leaving drawing fills explicit. */
+html[data-theme="dark"] :is(.workspace, .flow-workspace, .settings-panel, .project-card, .review-files, .pdf-download-card, .library-header, .library-editor, .support-editor-header, .support-editor-inspector, .project-library, .product-library, .product-card, .hub-products, .hub-section-manager, .hub-backup-note) {
+  color: #e4e9df; background: #222b23; border-color: #465140;
+}
+html[data-theme="dark"] :is(.canvas-panel, .canvas-toolbar, .stage-canvas-header, .outline-editor, .breaker-designer, .support-editor, .library-list, .library-footer, .hub-project-tools, .project-empty, .new-project-form, .photo-coordinates section, .fit-card, .support-audit, .report-notes, .quotation-totals, .estimate-total, .metrics, .layout-insight, .tip, .height-result, .editor-inspector, .editor-toolbar, .segmented, .support-editor-toolbar, .support-editor-footer, .scene-inspector) {
+  color: #e4e9df; background: #29342a; border-color: #465140;
+}
+html[data-theme="dark"] :is(.hub-project-tabs, .draft-chip, .project-image > span) { color: #dbe6cf; background: #29342a; border-color: #54614b; }
+html[data-theme="dark"] :is(.cutout-shape-tools > button, .plan-rotation button, .guided-steps button > span) { color: #dbe6cf; background: #253024; border-color: #54614b; }
+html[data-theme="dark"] .cutout-shape-tools > button:is(:hover, .selected) { background: #3c4b30; border-color: #9caf74; }
+html[data-theme="dark"] :is(.editor-footer > span, .plan-rotation, .angle-presets, .cutout-settings .section-heading > span) { color: #b3bfaa; }
+html[data-theme="dark"] :is(.topbar, .custom-outline, .profile-details, .stage-summary, .panel-footer, .material-notes, .quotation-settings, .editor-footer, .support-editor-inspector section, .project-card-actions, .hub-projects-heading, .hub-section-rows form, .paper-brand, .quotation-totals > div:last-child) { border-color: #465140; }
+html[data-theme="dark"] :is(.field input:not([type="color"]):not([type="checkbox"]):not([type="radio"]), .field select, .field textarea, .quotation-settings input, .quotation-settings textarea, .project-home input, .project-home select, .library-list input, .library-list select, .library-editor input:not([type="color"]), .library-editor select, .library-editor textarea, .materials-table input, .editor-project-name, .support-editor input:not([type="color"]), .support-editor select) {
+  color: #e4e9df; background: #19221b; border-color: #54614b;
+}
+html[data-theme="dark"] :is(input, textarea)::placeholder { color: #9aa88f; }
+html[data-theme="dark"] .app-shell :is(p, small, label, dt, .eyebrow, .field-note, .setting-heading, .saved-indicator, .site-footer, .project-card > p, .project-card-body > p, .hub-products-count, .hub-backup-note, .height-stack-total, .view-legend, .plan-caption, .canvas-caption, .measurement-key, .editor-footer, .review-details, .pricing-notes, .material-notes) { color: #b3bfaa; }
+html[data-theme="dark"] .app-shell :is(h1, h2, h3, h4, strong, b, dd, .text-button, .project-card-title, .paper-numeric) { color: #e4e9df; }
+html[data-theme="dark"] :is(.button.secondary, .button.quiet, .choice-control button, .editor-toolbar button, .angle-presets button, .hub-project-tabs button, .view-tabs button, .review-jumps a, .download-format) { color: #dbe6cf; background: #253024; border-color: #54614b; }
+html[data-theme="dark"] :is(.button.secondary, .button.quiet, .editor-toolbar button, .review-jumps a):hover { background: #39482f; border-color: #899f67; }
+html[data-theme="dark"] .button.primary { color: #fff; background: #677c35; }
+html[data-theme="dark"] .button.primary:hover { background: #7a9142; }
+html[data-theme="dark"] :is(.guided-steps button, .project-sidebar nav > button) { color: #b3bfaa; border-color: #465140; }
+html[data-theme="dark"] :is(.guided-steps button.active, .segmented button.selected, .choice-control button.selected, .editor-toolbar button.active, .view-tabs button.active, .frame-option.active, .hub-project-tabs button[aria-pressed="true"], .project-sidebar nav > button.active, .layer-card.selected) { color: #e7f2d9; background: #3c4b30; border-color: #9caf74; }
+html[data-theme="dark"] :is(.guided-steps button, .project-sidebar nav > button):hover { background: #303f2d; }
+html[data-theme="dark"] .brand-name { color: #ded2b1; }
+html[data-theme="dark"] .brand-name > span { color: #a2ce5c; }
+html[data-theme="dark"] :is(.frame-option, .cut-summary > div, .review-state, .product-card, .hub-section-manager input) { border-color: #465140; }
+html[data-theme="dark"] :is(.error, .designer-error, .project-storage-error, .csv-unavailable, .support-resolution, .height-result.mismatch, .review-state.needs-review) { color: #ffd4b8; background: #482f23; border-color: #916244; }
+html[data-theme="dark"] .app-shell :is(.error, .designer-error, .project-storage-error, .csv-unavailable, .support-resolution) { color: #ffd4b8; }
+html[data-theme="dark"] .materials-table :is(th, td) { color: #e4e9df; border-color: #465140; }
+html[data-theme="dark"] .materials-table th { background: #34422d; }
+html[data-theme="dark"] .materials-table tbody tr { background: #222b23; border-color: #465140; }
+html[data-theme="dark"] .materials-table td:last-child { border-color: #465140; }
+html[data-theme="dark"] .quotation-totals .currency-amount { color: #c4df8b; }
+
+/* Detail panels and viewer controls share the same dark interface palette. */
+html[data-theme="dark"] :is(.selected-frame-system, .support-advanced, .pedestal-survey, .audit-product-note, .audit-checks > div, .scene-controls, .deck-label-key, .frame-edge-details, .breaker-waste-summary, .manual-support-note, .cutout-list > div) { color: #e4e9df; background: #29342a; border-color: #54614b; }
+html[data-theme="dark"] .app-shell :is(.board-product-details summary, .product-reference summary, .selected-system-heading, .height-stack-key, .pedestal-survey summary, .pedestal-survey summary > span, .audit-product-note summary, .stage-summary > div, .stage-canvas-header small, .fit-actions > span, .layer-rail-title, .scene-help, .scene-controls > div, .scene-controls output, .height-result span, .field em) { color: #b3bfaa; }
+html[data-theme="dark"] :is(.scene-controls button, .scene-inspector button, .support-group-buttons button, .survey-pagination button, .deck-label-key button, .layer-card) { color: #dbe6cf; background: #253024; border-color: #54614b; }
+html[data-theme="dark"] :is(.layer-card.selected, .deck-label-key button[aria-pressed="true"], .cutout-list > div.selected) { background: #3c4b30; border-color: #9caf74; }
+html[data-theme="dark"] :is(.layer-card-label, .layer-card.selected .layer-card-label, .support-view-rail .layer-card-label, .cutout-list button) { color: #dbe6cf; }
+html[data-theme="dark"] :is(.scene-accessible-picker input, .scene-accessible-picker select, .pedestal-survey input) { color: #e4e9df; background: #19221b; border-color: #54614b; }
+html[data-theme="dark"] :is(.support-height-summary, .support-settings-group, .scene-help, .scene-accessible-picker, .scene-inspector dl > div, .pedestal-survey td, .pedestal-survey th) { border-color: #54614b; }
+html[data-theme="dark"] :is(.support-mode-badge, .audit-badge.pass, .pedestal-survey th) { color: #d0e5ab; background: #3c4b30; border-color: #62734d; }
+html[data-theme="dark"] .app-shell :is(.frame-option .fit, .pedestal-survey .survey-pass) { color: #c4df8b; }
+html[data-theme="dark"] .app-shell :is(.frame-option .no-fit, .frame-option .frame-option-reason, .pedestal-survey .survey-fail) { color: #edb496; }
+html[data-theme="dark"] :is(.selected-frame-system.needs-review, .audit-checks > div.fail, .pedestal-survey .survey-outside) { color: #ffd4b8; background: #482f23; border-color: #916244; }
+html[data-theme="dark"] .app-shell :is(.height-result.mismatch span, .height-result.mismatch p) { color: #ffd4b8; }
+html[data-theme="dark"] .deck-view.perspective { background: radial-gradient(ellipse at center, #46533c 0%, transparent 65%); }
+html[data-theme="dark"] .deck-view .deck-svg g[fill="#617155"] { fill: #b3bfaa; }
+html[data-theme="dark"] :is(.support-tool-grid button, .support-editor-toolbar button) { color: #dbe6cf; background: #253024; border-color: #54614b; }
+html[data-theme="dark"] .support-tool-grid button[aria-pressed="true"] { background: #3c4b30; border-color: #9caf74; }
+html[data-theme="dark"] :is(.support-live-check.passes, .support-setting-options article, .product-library .library-form-actions, .library-feedback:not(.error)) { color: #e4e9df; background: #29342a; }
+html[data-theme="dark"] .support-live-check:not(.passes) { color: #ffd4b8; background: #482f23; }
+html[data-theme="dark"] .support-editor-legend { background: #29342a; border-color: #54614b; }
+html[data-theme="dark"] :is(.support-editor-header > span, .support-editor-legend, .support-coordinate > span, .range-clear) { color: #b3bfaa; }
+
+/* Keep the report preview legible as its own surface in either theme. */
+html[data-theme="dark"] .export-paper { color: #e4e9df; background: #222b23; border-color: #465140; }
+html[data-theme="dark"] .export-paper td { color: #e4e9df; background: #222b23; border-color: #465140; }
+html[data-theme="dark"] .export-paper tbody tr:nth-child(even) td { background: #29342a; }
+html[data-theme="dark"] .export-paper :is(th, .paper-total) { border-color: #465140; }
+
+@media (max-width: 760px) {
+  .theme-toggle { min-width: 44px; min-height: 44px; padding: 10px; }
+  .theme-toggle > span { display: none; }
+  .project-editor .topbar .theme-toggle { order: 2; }
+}

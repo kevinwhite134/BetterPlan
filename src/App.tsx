@@ -1,4 +1,5 @@
 import SupportViews from './SupportViews'
+import ThemeToggle from './ThemeToggle'
 import PhotoCoordinates from './PhotoCoordinates'
 import { parseOutlineCoordinates } from './outlineCoordinates'
 import ProjectLibrary from './ProjectHome'
@@ -39,6 +40,7 @@ import { DEFAULT_SETTINGS, bounds, normalize, polygonError, validateSettings } f
 import type { BoardProfile, Plan, Point, Settings } from './planner'
 import './App.css'
 import './Interface.css'
+import './Theme.css'
 
 const STORAGE='betterdeck-project-v1',PROFILES='betterdeck-board-profiles-v1'
 const TABS=[{id:'shape',label:'Shape',n:'01'},{id:'boards',label:'Boards',n:'02'},{id:'frame',label:'Supports',n:'03'},{id:'finish',label:'Finish',n:'04'},{id:'materials',label:'Review',n:'05'}] as const
@@ -174,6 +176,7 @@ export default function App() {
     <header className="topbar"><a className="brand" href="#" aria-label="BetterPlan projects" onClick={e=>{e.preventDefault();showProjects()}}><Brand/></a><div className="header-actions">
       {!home&&currentProject?<div className="editor-project-title"><button type="button" className="text-button" onClick={showProjects}>← Projects</button><input key={currentProject.id} className="editor-project-name" aria-label="Current project name" title="Edit project name" defaultValue={currentProject.name} maxLength={120} onBlur={e=>{projectLibrary.rename(currentProject.id,e.target.value);e.target.value=e.target.value.trim()||'Untitled project'}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();if(e.key==='Escape'){e.currentTarget.value=currentProject.name;e.currentTarget.blur()}}}/></div>:null}
       <span role="status" className={`saved-indicator ${projectLibrary.saveState==='error'?'project-saving-error':''}`}><i/>{projectLibrary.saveState==='error'?'Not saved':!projectLibrary.ready?'Loading…':projectLibrary.saveState==='saving'?'Saving…':dirty?'Draft not applied':'Saved'}</span>
+      <ThemeToggle/>
       {!home?<button type="button" className="button quiet products-button" onClick={()=>openProducts()} disabled={dirty||!projectLibrary.ready}>Products</button>:null}
     </div></header>
     {projectLibrary.error?<p className="project-storage-error" role="alert">{projectLibrary.error}</p>:null}
