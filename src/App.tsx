@@ -14,7 +14,6 @@ import QuotationSettings from './QuotationSettings'
 import OpenIcon from './OpenIcon'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ChoiceField, Field } from './SettingControls'
-import { MAX_PROJECT_SIZE } from './projectLimits'
 import { useDeckPlanning } from './useDeckPlanning'
 import PerimeterEdgePicker from './PerimeterEdgePicker'
 import { breakerBoardCount } from './breakerWidth'
@@ -36,7 +35,7 @@ import { cutoutPlacementError } from './shapeGeometry'
 import type { CutoutTool } from './cutoutInteraction'
 import BreakerDesigner from './BreakerDesigner'
 import { BoardFit, SupportAudit, FinishSettings } from './FlowPanels'
-import { DEFAULT_SETTINGS, bounds, normalize, polygonError, validateSettings } from './planner'
+import { DEFAULT_SETTINGS, normalize, polygonError, validateSettings } from './planner'
 import type { BoardProfile, Plan, Point, Settings } from './planner'
 import './App.css'
 import './Interface.css'
@@ -53,26 +52,13 @@ function ColourHex({value,onChange,...controlProps}: {value:string;onChange:(val
   const [draft,setDraft]=useState(value)
   return <input {...controlProps} aria-label={controlProps['aria-label']??'Colour hex code'} value={draft} maxLength={7} spellCheck={false} onBlur={()=>setDraft(value)} onChange={e=>{setDraft(e.target.value);if(/^#[0-9a-f]{6}$/i.test(e.target.value))onChange(e.target.value)}}/>
 }
-function ShapeEditor({settings,onChange}: {settings:Settings;onChange:(p:Point[])=>void}) {
-  const box=bounds(settings.polygon),[width,setWidth]=useState(box.width),[depth,setDepth]=useState(box.depth),[notchW,setNotchW]=useState(2),[notchD,setNotchD]=useState(1.5),[shape,setShape]=useState('rectangle')
+function ShapeEditor({settings,onChange}: {settings:Settings;onChange:(p:Point[])=>string|void}) {
   const [text,setText]=useState(''),[error,setError]=useState('')
   const [previousPolygon,setPreviousPolygon]=useState(settings.polygon)
-  if(previousPolygon!==settings.polygon){setPreviousPolygon(settings.polygon);setWidth(box.width);setDepth(box.depth);setText('')}
-  const apply=(p:Point[])=>{const err=polygonError(p)||cutoutPlacementError(p,settings.cutouts??[],pictureFrameWidth(settings)+settings.board.gap/1000+.05);setError(err);if(!err){const q=normalize(p);onChange(q);setText('')}}
-  const preset=()=>{
-    if(!Number.isFinite(width+depth)||width<.3||depth<.3){setError('Enter dimensions of at least 0.3 m.');return}
-    if((shape==='l'||shape==='u')&&(!Number.isFinite(notchW+notchD)||notchW<=0||notchW>=width||notchD<=0||notchD>=depth)){setError('The cut-out must fit inside the deck dimensions.');return}
-    if(shape==='rectangle')apply([{x:0,y:0},{x:width,y:0},{x:width,y:depth},{x:0,y:depth}])
-    if(shape==='l')apply([{x:0,y:0},{x:width,y:0},{x:width,y:depth-notchD},{x:width-notchW,y:depth-notchD},{x:width-notchW,y:depth},{x:0,y:depth}])
-    if(shape==='u'){const left=(width-notchW)/2;apply([{x:0,y:0},{x:width,y:0},{x:width,y:depth},{x:left+notchW,y:depth},{x:left+notchW,y:depth-notchD},{x:left,y:depth-notchD},{x:left,y:depth},{x:0,y:depth}])}
-    if(shape==='angled')apply([{x:0,y:0},{x:width,y:0},{x:width*.8,y:depth},{x:0,y:depth}])
-  }
-  return <><div className="section-heading"><h2>Dimensions</h2></div>
-    <Field label="Outline template"><select value={shape} onChange={e=>setShape(e.target.value)}><option value="rectangle">Rectangle</option><option value="l">L-shaped</option><option value="u">U-shaped</option><option value="angled">Angled edge</option></select></Field>
-    <div className="field-grid"><Field label="Overall width" unit="m"><Numeric value={width} onChange={setWidth} min={.3} max={MAX_PROJECT_SIZE} step={.1}/></Field><Field label="Overall depth" unit="m"><Numeric value={depth} onChange={setDepth} min={.3} max={MAX_PROJECT_SIZE} step={.1}/></Field></div>
-    {shape==='l'||shape==='u'?<div className="field-grid"><Field label="Cut-out width" unit="m"><Numeric value={notchW} onChange={setNotchW} min={.1} step={.1}/></Field><Field label="Cut-out depth" unit="m"><Numeric value={notchD} onChange={setNotchD} min={.1} step={.1}/></Field></div>:null}
-    <button className="button primary full" onClick={preset}>Apply outline <span><OpenIcon/></span></button>
-    <section className="custom-outline" aria-labelledby="custom-outline-title"><h3 id="custom-outline-title">Custom outline / edit corners</h3><p>One x, y pair per line in metres, in boundary order. Add internal openings in Cutouts below.</p><PhotoCoordinates onInsert={coordinates=>{setText(coordinates);setError('')}}/><Field label="Corner coordinates"><textarea rows={8} placeholder="Paste coordinates here…" value={text} onChange={e=>setText(e.target.value)} spellCheck={false}/></Field><button className="button secondary full" disabled={!text.trim()} onClick={()=>apply(parseOutlineCoordinates(text))}>Apply corners</button></section>
+  if(previousPolygon!==settings.polygon){setPreviousPolygon(settings.polygon);setText(settings.polygon.map(p=>`${p.x}, ${p.y}`).join('\n'))}
+  const apply=(p:Point[])=>{const err=polygonError(p)||cutoutPlacementError(p,settings.cutouts??[],pictureFrameWidth(settings)+settings.board.gap/1000+.05)||(onChange(normalize(p))??'');setError(err);return err}
+  return <>
+    <section className="custom-outline" aria-labelledby="custom-outline-title"><h3 id="custom-outline-title">Custom outline / edit corners</h3><p>One x, y pair per line in metres, in boundary order. Add internal openings in Cutouts below.</p><PhotoCoordinates onApply={coordinates=>{setText(coordinates);return apply(parseOutlineCoordinates(coordinates))}}/><Field label="Corner coordinates"><textarea rows={8} placeholder="Paste coordinates here…" value={text} onChange={e=>setText(e.target.value)} spellCheck={false}/></Field><button className="button secondary full" disabled={!text.trim()} onClick={()=>apply(parseOutlineCoordinates(text))}>Apply corners</button></section>
     {error?<p className="error" role="alert">{error}</p>:null}</>
 }
 function BoardEditor({settings:s,onChange,products,onApply,onManage,onSaveCurrent,onEditBreakers}: {settings:Settings;onChange:(s:Settings)=>void;products:LibraryProduct[];onApply:(p:LibraryProduct)=>void;onManage:()=>void;onSaveCurrent:()=>void;onEditBreakers:()=>void}) {
@@ -192,7 +178,7 @@ export default function App() {
     {editingSupports&&plan?<SupportEditor plan={plan} settings={settings} onApply={setSettings} onClose={()=>setEditingSupports(false)}/>:null}
     <main className={`workspace flow-workspace stage-${stage}`}>
       <aside className="settings-panel">
-        {stage==='shape'?<><ShapeEditor settings={settings} onChange={polygon=>{if(outlineDirty){setStatus('Apply or revert the canvas draft before replacing it with a template.');return}setSettings({...settings,polygon,perimeterEdges:polygon.length===settings.polygon.length?settings.perimeterEdges:undefined})}}/><CutoutEditor settings={settings} selected={selectedCutout} placement={cutoutPlacement} disabled={outlineDirty} onSelect={setSelectedCutout} onPlacement={setCutoutPlacement} onChange={next=>outlineDirty?'Apply or revert the outline draft before editing cutouts.':saveCutouts(next)}/></>:null}
+        {stage==='shape'?<><ShapeEditor settings={settings} onChange={polygon=>{if(outlineDirty){const issue='Apply or revert the canvas draft before replacing the outline.';setStatus(issue);return issue}setSettings({...settings,polygon,perimeterEdges:polygon.length===settings.polygon.length?settings.perimeterEdges:undefined})}}/><CutoutEditor settings={settings} selected={selectedCutout} placement={cutoutPlacement} disabled={outlineDirty} onSelect={setSelectedCutout} onPlacement={setCutoutPlacement} onChange={next=>outlineDirty?'Apply or revert the outline draft before editing cutouts.':saveCutouts(next)}/></>:null}
         {stage==='boards'?<BoardEditor settings={settings} onChange={setSettings} products={products} onApply={selectProduct} onManage={()=>openProducts()} onSaveCurrent={()=>openProducts('board')} onEditBreakers={()=>setBoardEditing(true)}/>:null}
         {stage==='frame'?<FrameSettings settings={settings} onChange={setSettings} plan={plan} prices={prices} products={products} onApplyProduct={selectProduct} onManageProducts={()=>openProducts()} onSaveProduct={openProducts} providedRecommendation={computed.recommendation} pending={computed.pending} onEditSupports={()=>setEditingSupports(true)}/>:null}
         {stage==='finish'?<FinishSettings settings={settings} onChange={setSettings} plan={plan}/>:null}

@@ -11,6 +11,7 @@
 @keyframes photo-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .photo-spinner { animation: none; } }
 .custom-outline > h3 { font-size: 14px; font-weight: 500; line-height: 1.6; margin: 0; }
+.settings-panel > .custom-outline:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
 .custom-outline textarea::placeholder { color: #849079; opacity: 1; }
 .measured-plan-window.interactive-plan { position: relative; overflow: hidden; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
 .interactive-plan.is-dragging { cursor: grabbing; }

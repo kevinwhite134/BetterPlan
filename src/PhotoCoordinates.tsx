@@ -1,15 +1,17 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { Field } from './SettingControls'
 import { MAX_PHOTO_BYTES, MAX_SOURCE_PHOTO_BYTES, PHOTO_ACCEPT, PHOTO_ENDPOINT, photoUploadError } from './photoUpload'
 import { parseOutlineCoordinates } from './outlineCoordinates'
 import { polygonError } from './planner'
 
-export default function PhotoCoordinates({ onInsert }: { onInsert: (coordinates: string) => void }) {
+export default function PhotoCoordinates({ onApply }: { onApply: (coordinates: string) => string }) {
   const [open, setOpen] = useState(false), [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false), [coordinates, setCoordinates] = useState('')
   const [error, setError] = useState(''), [notice, setNotice] = useState('')
   const upload = useRef<HTMLInputElement>(null), camera = useRef<HTMLInputElement>(null), output = useRef<HTMLTextAreaElement>(null)
   const controller = useRef<AbortController | null>(null), id = useId()
+  const applyCoordinates = useRef(onApply)
+  useLayoutEffect(() => { applyCoordinates.current = onApply }, [onApply])
   useEffect(() => () => { controller.current?.abort(); controller.current = null }, [])
 
   function choose(next?: File) {
@@ -49,7 +51,10 @@ export default function PhotoCoordinates({ onInsert }: { onInsert: (coordinates:
       if (typeof result?.coordinates !== 'string' || polygonError(parseOutlineCoordinates(result.coordinates))) throw new Error('The AI returned invalid coordinates. Try another photograph.')
       if (!current.signal.aborted) {
         setCoordinates(result.coordinates)
-        if ((result.accuracy === 'Scale-derived' || result.accuracy === 'Estimated') && Number.isFinite(result.width) && Number.isFinite(result.depth)) setNotice(`${result.accuracy} · ${result.width.toFixed(2)} × ${result.depth.toFixed(2)} m. Check against your image before applying.`)
+        const issue = applyCoordinates.current(result.coordinates)
+        if (issue) { setError(issue); return }
+        const dimensions = (result.accuracy === 'Scale-derived' || result.accuracy === 'Estimated') && Number.isFinite(result.width) && Number.isFinite(result.depth) ? ` ${result.accuracy} · ${result.width.toFixed(2)} × ${result.depth.toFixed(2)} m.` : ''
+        setNotice(`Coordinates inserted and corners applied.${dimensions} Check the outline and dimensions against your image.`)
       }
     } catch (reason) {
       if (controller.current === current) setError(current.signal.aborted ? 'Photo analysis was cancelled or timed out. Please try again.' : reason instanceof Error ? reason.message : 'Photo analysis failed. Please try again.')
@@ -66,7 +71,7 @@ export default function PhotoCoordinates({ onInsert }: { onInsert: (coordinates:
   return <div className="photo-coordinates">
     <button className="button secondary full" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>AI Photo to Coordinates</button>
     {open ? <section id={id} aria-label="AI Photo to Coordinates" aria-busy={busy}>
-      <p>Take or upload a deck photo for a rough outline in metres. Check the estimated dimensions before applying.</p>
+      <p>Take or upload a deck photo for a rough outline in metres. Analysis automatically fills the coordinates and applies the corners.</p>
       <p className="field-note">JPEG, PNG or WebP · up to 10 MB. The photo is sent to OpenAI for analysis.</p>
       <input hidden ref={camera} type="file" accept={PHOTO_ACCEPT} capture="environment" onChange={e => { choose(e.target.files?.[0]); e.target.value = '' }}/>
       <input hidden ref={upload} type="file" accept={PHOTO_ACCEPT} onChange={e => { choose(e.target.files?.[0]); e.target.value = '' }}/>
@@ -76,7 +81,7 @@ export default function PhotoCoordinates({ onInsert }: { onInsert: (coordinates:
       {busy ? <p role="status">Analysing the deck perimeter…</p> : null}
       {coordinates ? <>
         <Field label="Generated BEV coordinates (metres)"><textarea ref={output} rows={8} value={coordinates} readOnly spellCheck={false} onFocus={e => e.target.select()}/></Field>
-        <div className="photo-actions"><button className="button secondary" onClick={copy}>Copy Coordinates</button><button className="button secondary" onClick={() => { onInsert(coordinates); setNotice('Inserted into Corner coordinates. Use Apply corners when ready.') }}>Insert into coordinates</button></div>
+        <div className="photo-actions"><button className="button secondary" onClick={copy}>Copy Coordinates</button></div>
       </> : null}
       {error ? <p className="error" role="alert">{error}</p> : null}
       {notice ? <p role="status">{notice}</p> : null}
