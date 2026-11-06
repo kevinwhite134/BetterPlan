@@ -47,7 +47,10 @@ export default function PhotoCoordinates({ onInsert }: { onInsert: (coordinates:
       const result = await response.json().catch(() => { throw new Error('Photo analysis is unavailable. Please try again later.') })
       if (!response.ok) throw new Error(typeof result?.error === 'string' ? result.error : 'Photo analysis failed. Please try again.')
       if (typeof result?.coordinates !== 'string' || polygonError(parseOutlineCoordinates(result.coordinates))) throw new Error('The AI returned invalid coordinates. Try another photograph.')
-      if (!current.signal.aborted) setCoordinates(result.coordinates)
+      if (!current.signal.aborted) {
+        setCoordinates(result.coordinates)
+        if ((result.accuracy === 'Scale-derived' || result.accuracy === 'Estimated') && Number.isFinite(result.width) && Number.isFinite(result.depth)) setNotice(`${result.accuracy} · ${result.width.toFixed(2)} × ${result.depth.toFixed(2)} m. Check against your image before applying.`)
+      }
     } catch (reason) {
       if (controller.current === current) setError(current.signal.aborted ? 'Photo analysis was cancelled or timed out. Please try again.' : reason instanceof Error ? reason.message : 'Photo analysis failed. Please try again.')
     } finally {

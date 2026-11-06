@@ -19,7 +19,7 @@ const shapes: Record<string, Point[]> = {
   irregular: [{ x: 0, y: 1 }, { x: 3, y: 0 }, { x: 6, y: 2 }, { x: 4, y: 3 }, { x: 5, y: 5 }, { x: 1, y: 4 }],
 }
 function modelResponse(vertices: unknown) {
-  return { status: 'completed', output: [{ type: 'message', content: [{ type: 'output_text', text: JSON.stringify({ vertices }) }] }] }
+  return { status: 'completed', output: [{ type: 'message', content: [{ type: 'output_text', text: JSON.stringify({ vertices, measurements: [], estimated_width_metres: Array.isArray(vertices) && vertices.length ? bounds(vertices).width : null }) }] }] }
 }
 async function withServer(handler: ReturnType<typeof createPhotoHandler>, run: (url: string, server: Server) => Promise<void>) {
   const server = createServer(handler)
