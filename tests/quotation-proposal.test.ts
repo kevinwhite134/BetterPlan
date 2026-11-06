@@ -42,6 +42,20 @@ test('a missing extra rate, blank description or unresolved additional deck with
   assert.equal(free.complete,true);assert.equal(free.vatCents,0)
 })
 
+test('unfinished numeric and unit inputs stay pending without leaking non-finite totals',()=>{
+  for(const extra of [{id:'draft',description:'Steps',quantity:NaN,unit:'items',unitRate:100},{id:'draft',description:'Steps',quantity:2,unit:'',unitRate:100}]){
+    const q=quotationEstimate(plan,{...settings,quotation:{...quotation,extras:[extra]}},prices)
+    assert.equal(q.pending,true);assert.equal(q.totalCents,null);assert.ok(Number.isFinite(q.subtotalCents))
+  }
+})
+
+test('a typical customer proposal keeps its scope and next steps within three pages',async()=>{
+  const png=Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aN1cAAAAASUVORK5CYII=','base64'))
+  const s:Settings={...DEFAULT_SETTINGS,quotation:{customerName:'Sample customer',customerAddress:'24 Sample Street\nCo. Cavan',customerEircode:'H12 AB34',scope:'A composite garden terrace with matching fascia, perimeter border and an adjustable substructure.',vatRate:23,extras:quotation.extras}}
+  const pdf=await PDFDocument.load(await exportCustomerQuotePack(plan,s,prices,{preview:png,planPreview:png}))
+  assert.equal(pdf.getPageCount(),3)
+})
+
 test('quotation snapshots round-trip without recursive project data and reject malformed inputs',()=>{
   assert.equal(validateSettings(JSON.parse(JSON.stringify(settings))),'')
   assert.equal(quotationDetailsError({additionalDecks:[{...quotation.additionalDecks[0],settings}]}),'Additional decks must contain design settings only.')

@@ -6,7 +6,7 @@ import { quotationMaterialLines, quotationSections } from './quotationSections.t
 export function quotationEstimate(plan:Plan,s:Settings,prices:Record<string,string>){
   const sections=quotationSections(plan,s,prices),materials=quotationMaterialLines(sections)
   const extras=(s.quotation?.extras??[]).map(e=>{
-    const rate=e.unitRate??null,pending=!e.description.trim()
+    const rate=e.unitRate!==undefined&&Number.isFinite(e.unitRate)&&e.unitRate>=0?e.unitRate:null,pending=!e.description.trim()||!Number.isFinite(e.quantity)||e.quantity<=0||!e.unit.trim()
     return {key:`extra:${e.id}`,name:e.description.trim()||'Extra description required',qty:e.quantity,unit:e.unit,note:'Additional quoted item',pending,rate,cents:pending||rate===null?null:Math.round((e.quantity*rate+Number.EPSILON)*100),sectionId:'extras',sectionName:'Extras',group:'Extras'}
   })
   const lines=[...materials,...extras],priced=lines.filter(l=>l.rate!==null).length,pending=lines.some(l=>l.pending),complete=!pending&&priced===lines.length

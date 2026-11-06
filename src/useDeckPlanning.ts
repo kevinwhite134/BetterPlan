@@ -6,7 +6,10 @@ import type { PlanningReply, PlanningResult, PlanningTask } from './planning'
 export type DeckPlanningState=PlanningResult&{pending:boolean}
 
 export function useDeckPlanning(input:Settings,prices:Record<string,string>,enabled:boolean):DeckPlanningState{
-  const settings=useMemo(()=>({...input,perimeterJoints:true}),[input])
+  // Customer copy and quotation options never affect the physical deck. Keep
+  // geometry stable while typing, and reattach the latest details below.
+  const designKey=useMemo(()=>JSON.stringify({...input,quotation:undefined}),[input])
+  const settings=useMemo<Settings>(()=>({...JSON.parse(designKey),perimeterJoints:true}),[designKey])
   const background=enabled&&needsBackgroundPlanning(settings)
   const key=useMemo(()=>JSON.stringify([settings,prices]),[settings,prices])
   const [completed,setCompleted]=useState<PlanningReply|null>(null)
@@ -30,9 +33,7 @@ export function useDeckPlanning(input:Settings,prices:Record<string,string>,enab
     return ()=>{active=false;worker?.terminate()}
   },[background,key,settings,prices])
 
-  if(!enabled)return {settings,plan:null,error:'',pending:false}
-  if(synchronous)return {...synchronous,pending:false}
-  if(completed?.key===key)return {...completed.result,pending:false}
-  // Never show a previous project's geometry underneath newly edited inputs.
-  return {settings,plan:null,error:'',pending:true,recommendation:pendingRecommendation(settings)}
+  const result:DeckPlanningState=!enabled?{settings,plan:null,error:'',pending:false}:synchronous?{...synchronous,pending:false}:completed?.key===key?{...completed.result,pending:false}:{settings,plan:null,error:'',pending:true,recommendation:pendingRecommendation(settings)}
+  const quotedSettings=useMemo(()=>({...result.settings,quotation:input.quotation}),[result.settings,input.quotation])
+  return {...result,settings:quotedSettings}
 }

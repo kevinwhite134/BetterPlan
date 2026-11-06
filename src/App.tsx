@@ -3,12 +3,11 @@ import ThemeToggle from './ThemeToggle'
 import PhotoCoordinates from './PhotoCoordinates'
 import { parseOutlineCoordinates } from './outlineCoordinates'
 import ProjectLibrary from './ProjectHome'
-import ReviewFiles from './ReviewFiles'
+import QuotationWorkspace from './QuotationWorkspace'
 import { useProjectWorkspace } from './useProjectWorkspace'
 import { parseProjectFile, projectFile } from './projectLibrary'
 import type { ProjectSnapshot, SavedProject } from './projectLibrary'
 import './DeckScene.css'
-import QuotationSettings from './QuotationSettings'
 import OpenIcon from './OpenIcon'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ChoiceField, Field } from './SettingControls'
@@ -154,7 +153,6 @@ export default function App() {
   const exportProducts=()=>download('betterplan-products.json',JSON.stringify({version:1,type:'betterplan-products',products},null,2),'application/json')
   const saveCutouts=(next:Settings)=>{const error=validateSettings(next);if(error)return error;setSettings(next);setStatus('');return ''}
   const ready=!computed.pending&&!dirty&&(stage==='shape'?!polygonError(settings.polygon):!schemaError&&(stage!=='boards'||!!plan))
-  const reviewCount=plan?Number(!plan.frame.geometryPass)+Number(!plan.heightFits)+Number(plan.boards.fit.needsAdjustment)+Number(!settings.confirmed)+Number(!settings.edgeDetailConfirmed)+Number(!!settings.skirting&&plan.skirtingGap<0):1
   const titles:Record<Tab,string>={shape:'Deck shape',boards:'Deck boards',frame:'Frame & supports',finish:'Finish',materials:'Review & export'}
   return <div className={`app-shell guided-app ${home?'projects-screen':'project-editor'}`}>
     <header className="topbar"><a className="brand" href="#" aria-label="BetterPlan projects" onClick={e=>{e.preventDefault();showProjects()}}><Brand/></a><div className="header-actions">
@@ -170,17 +168,15 @@ export default function App() {
     {projectLibrary.ready&&home&&projectLibrary.workspace?<ProjectLibrary productCount={products.length} onProducts={()=>openProducts()} workspace={projectLibrary.workspace} onOpen={openProject} onCreate={createProject} onRename={projectLibrary.rename} onDelete={projectLibrary.remove} onMove={projectLibrary.move} onAddSection={projectLibrary.addSection} onRenameSection={projectLibrary.renameSection} onImport={importProject} onExport={exportProject}/>:null}
     {projectLibrary.ready&&!home?<>
 
-    <div className="flow-title"><h1>{titles[stage]}</h1></div>
+    {stage!=='materials'?<div className="flow-title"><h1>{titles[stage]}</h1></div>:null}
     <nav className="guided-steps" aria-label="Deck creation steps">{TABS.map((t,i)=><button key={t.id} onClick={()=>navigate(t.id)} className={`${i===step?'active':''} ${i<step?'visited':''}`} aria-current={i===step?'step':undefined}><span>{i<step?'✓':i+1}</span><b>{t.label}</b></button>)}</nav>
-    {stage==='materials'?<nav className="review-jumps" aria-label="Review sections"><a href="#quotation-details-title">Customer details</a><a href="#project-downloads">Downloads</a><a href="#materials-pricing">Pricing</a></nav>:null}
     {editingSupports&&plan?<SupportEditor plan={plan} settings={settings} onApply={setSettings} onClose={()=>setEditingSupports(false)}/>:null}
-    <main className={`workspace flow-workspace stage-${stage}`}>
+    {stage==='materials'?<QuotationWorkspace initialStep={highlightMaterial?'pricing':undefined} key={currentProject?.id} plan={plan} settings={settings} prices={resolvedPricing(settings,prices)} projects={projectLibrary.workspace?.projects} currentId={currentProject?.id} pending={computed.pending} onChange={setSettings} onDownload={(filename,content,type)=>download(filename,content,type??'text/csv;charset=utf-8')} pricing={plan?<Materials plan={plan} settings={settings} prices={prices} onPrices={setPrices} highlight={highlightMaterial}/>:<p>Preparing material quantities…</p>} checks={plan?<><SupportAudit plan={plan} settings={settings}/><details className="review-details"><summary>Notes to resolve before ordering</summary><ul>{plan.warnings.map(w=><li key={w}>{w}</li>)}</ul></details></>:null}/>:<main className={`workspace flow-workspace stage-${stage}`}>
       <aside className="settings-panel">
         {stage==='shape'?<><ShapeEditor settings={settings} onChange={polygon=>{if(outlineDirty){const issue='Apply or revert the canvas draft before replacing the outline.';setStatus(issue);return issue}setSettings({...settings,polygon,perimeterEdges:polygon.length===settings.polygon.length?settings.perimeterEdges:undefined})}}/><CutoutEditor settings={settings} selected={selectedCutout} placement={cutoutPlacement} disabled={outlineDirty} onSelect={setSelectedCutout} onPlacement={setCutoutPlacement} onChange={next=>outlineDirty?'Apply or revert the outline draft before editing cutouts.':saveCutouts(next)}/></>:null}
         {stage==='boards'?<BoardEditor settings={settings} onChange={setSettings} products={products} onApply={selectProduct} onManage={()=>openProducts()} onSaveCurrent={()=>openProducts('board')} onEditBreakers={()=>setBoardEditing(true)}/>:null}
         {stage==='frame'?<FrameSettings settings={settings} onChange={setSettings} plan={plan} prices={prices} products={products} onApplyProduct={selectProduct} onManageProducts={()=>openProducts()} onSaveProduct={openProducts} providedRecommendation={computed.recommendation} pending={computed.pending} onEditSupports={()=>setEditingSupports(true)}/>:null}
         {stage==='finish'?<FinishSettings settings={settings} onChange={setSettings} plan={plan}/>:null}
-        {stage==='materials'?<><QuotationSettings s={settings} onChange={setSettings} projects={projectLibrary.workspace?.projects} currentId={currentProject?.id}/><div className="section-heading"><h2>Project settings</h2></div><div className={`review-state ${reviewCount?'needs-review':''}`}><strong>{reviewCount?`${reviewCount} areas need review`:'Geometry checks complete'}</strong><p>Concept estimate. Confirm pedestal capacity, ground bearing and connections.</p></div></>:null}
         {stage==='boards'?<DeckSizeOptions key={JSON.stringify(settings)} settings={settings} disabled={dirty} onChange={next=>{setSettings(next);setStatus('')}}/>:null}
         {plan&&stage!=='shape'?<div className="stage-summary"><div><span>Footprint</span><strong>{plan.area.toFixed(2)} m²</strong></div><div><span>Stock decking boards</span><strong>{plan.boards.bars.length}</strong></div><div><span>Pedestals</span><strong>{plan.frame.layoutStatus==='ready'?plan.frame.pedestals.length:'Pending'}</strong></div></div>:null}
       </aside>
@@ -191,11 +187,10 @@ export default function App() {
         {stage==='boards'&&!boardEditing&&plan?<><DeckView plan={plan} settings={settings} layer="boards" showSupports={true}/><BoardFit plan={plan} settings={settings}/></>:null}
         {stage==='frame'&&plan?<><SupportViews plan={plan} settings={settings} measurements={measurements} onMeasurements={setMeasurements}/>{measurements?<p className="measurement-key">All dimensions in mm · Support dimensions are centre-to-centre; identical parallel intervals are shown once · Exact support positions remain in the CSV.</p>:null}<SupportAudit plan={plan} settings={settings}/></>:null}
         {stage==='finish'&&plan?<DeckView plan={plan} settings={settings} layer="3d" showSupports={true} prices={resolvedPricing(settings,prices)} onShowMaterial={key=>{setHighlightMaterial(key);setStage('materials')}}/>:null}
-        {stage==='materials'?<div className="review-content"><ReviewFiles onChange={setSettings} plan={plan} settings={settings} prices={resolvedPricing(settings,prices)} pending={computed.pending} onDownload={(filename,content,type)=>download(filename,content,type??'text/csv;charset=utf-8')}/>{plan?<><Materials plan={plan} settings={settings} prices={prices} onPrices={setPrices} highlight={highlightMaterial}/><details className="review-details"><summary>Review support checks</summary><SupportAudit plan={plan} settings={settings}/></details><details className="review-details"><summary>Notes to resolve before ordering</summary><ul>{plan.warnings.map(w=><li key={w}>{w}</li>)}</ul></details></>:null}</div>:null}
         {computed.pending?<div className="deck-view preview-unavailable" role="status"><div className={stage==='finish'?'viewer-stage':'plan-stage'}><p className="preview-placeholder">Calculating the larger project… You can keep editing settings.</p></div></div>:null}
         {!plan&&computed.error?(stage==='frame'||stage==='finish'||stage==='boards'&&!boardEditing)?<div className="deck-view preview-unavailable"><div className={stage==='finish'?'viewer-stage':'plan-stage'}><p className="preview-placeholder">Enter valid values to update the preview.</p></div><p className="designer-error" role="alert">{computed.error} Your outline is retained.</p></div>:<p className="designer-error editor-layout-alert" role="alert">{computed.error} Your outline is retained.</p>:null}
       </section>
-    </main>
+    </main>}
     <nav className="flow-navigation" aria-label="Step navigation"><button className="button secondary" disabled={step===0||dirty} onClick={()=>navigate(TABS[step-1].id)}>← Back</button>{dirty?<span>Apply or revert the current draft to continue.</span>:null}{step<4?<button className="button primary" disabled={!ready} onClick={()=>navigate(TABS[step+1].id)}>Continue to {TABS[step+1].label.toLowerCase()} →</button>:<button className="button primary" onClick={showProjects} disabled={!!schemaError}>Back to projects →</button>}</nav>
     </>:null}
         {status||storageError?<p className="inline-feedback" role="alert">{storageError?'Browser storage is unavailable. Export the project to save your work.':status}</p>:null}

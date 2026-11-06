@@ -44,7 +44,8 @@ export async function deckPreviewPng(svg:string,width=1440,height=800):Promise<s
     const image=new Image();image.src=url;await image.decode()
     const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height
     const context=canvas.getContext('2d');if(!context)throw new Error('Image rendering is unavailable.')
-    context.drawImage(image,0,0,canvas.width,canvas.height)
+    const scale=Math.min(width/image.naturalWidth,height/image.naturalHeight),w=image.naturalWidth*scale,h=image.naturalHeight*scale
+    context.drawImage(image,(width-w)/2,(height-h)/2,w,h)
     return canvas.toDataURL('image/png')
   }finally{URL.revokeObjectURL(url)}
 }
