@@ -29,7 +29,9 @@
 .project-hub .project-card-title h2 { font-size: 17px; line-height: 1.5; }
 .project-hub .project-card-title .text-button { min-height: 26px; font-size: 11px; }
 .project-hub .project-card-body > p { font-size: 11px; line-height: 1.8; }
-.project-hub .project-card-actions { gap: 8px; }
+.project-hub .project-card-actions { gap: 8px; flex-wrap: wrap; }
+.project-card-actions .project-delete { color: #a13e32; }
+html[data-theme="dark"] .project-card-actions .project-delete { color: #f1a79b; }
 .project-hub .project-card-actions .button { padding: 10px 12px; }
 .project-hub .project-card-actions .text-button { font-size: 11px; }
 .hub-sidebar { display: grid; gap: 24px; }

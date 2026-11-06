@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { initialWorkspace, makeProject, projectName, saveActiveProject } from './projectLibrary'
+import { initialWorkspace, makeProject, projectName, removeProject, saveActiveProject } from './projectLibrary'
+import { DEFAULT_SETTINGS } from './planner'
 import type { ProjectSnapshot, ProjectWorkspace, SavedProject } from './projectLibrary'
 import { loadProjectWorkspace, storeProjectWorkspace } from './projectStorage'
 
-export function useProjectWorkspace(snapshot:ProjectSnapshot,onLoad:(project:SavedProject)=>void,enabled=true){
+export function useProjectWorkspace(snapshot:ProjectSnapshot,onLoad:(project:ProjectSnapshot)=>void,enabled=true){
   const [workspace,setWorkspace]=useState<ProjectWorkspace|null>(null),[ready,setReady]=useState(false),[saveState,setSaveState]=useState<'saving'|'saved'|'error'>('saving'),[error,setError]=useState('')
   const initial=useRef({snapshot,onLoad}),persist=useRef(true)
   useEffect(()=>{
@@ -12,7 +13,7 @@ export function useProjectWorkspace(snapshot:ProjectSnapshot,onLoad:(project:Sav
       let previous=null;try{previous=JSON.parse(localStorage.getItem('betterdeck-previous-v1')??'null')}catch{/* Legacy backup is optional. */}
       let loaded:ProjectWorkspace,canPersist=true
       try{loaded=await loadProjectWorkspace()??initialWorkspace(initial.current.snapshot.settings,initial.current.snapshot.prices,previous)}catch(e){canPersist=false;loaded=initialWorkspace(initial.current.snapshot.settings,initial.current.snapshot.prices,previous);if(live){setError(`${e instanceof Error?e.message:'Project storage is unavailable.'} Changes are only in memory; export your projects to keep them.`);setSaveState('error')}}
-      if(live){persist.current=canPersist;setWorkspace(loaded);initial.current.onLoad(loaded.projects.find(p=>p.id===loaded.activeId)!);setReady(true)}
+      if(live){persist.current=canPersist;setWorkspace(loaded);initial.current.onLoad(loaded.projects.find(p=>p.id===loaded.activeId)??{settings:DEFAULT_SETTINGS,prices:{},stage:'shape'});setReady(true)}
     }
     void boot();return ()=>{live=false}
   },[])
@@ -36,6 +37,12 @@ export function useProjectWorkspace(snapshot:ProjectSnapshot,onLoad:(project:Sav
     onLoad(project)
   }
   const rename=(id:string,name:string)=>setWorkspace(w=>w?{...w,projects:w.projects.map(p=>p.id===id?{...p,name:projectName(name)}:p)}:w)
+  const remove=(id:string)=>{
+    if(!workspace)return
+    const next=removeProject(workspace,id)
+    setWorkspace(next)
+    if(next.activeId!==workspace.activeId)onLoad(next.projects.find(p=>p.id===next.activeId)??{settings:DEFAULT_SETTINGS,prices:{},stage:'shape'})
+  }
   const move=(id:string,sectionId:string)=>setWorkspace(w=>w&&w.sections.some(s=>s.id===sectionId)?{...w,projects:w.projects.map(p=>p.id===id?{...p,sectionId}:p)}:w)
   const addSection=(name:string)=>{
     if(!workspace)return ''
@@ -43,5 +50,5 @@ export function useProjectWorkspace(snapshot:ProjectSnapshot,onLoad:(project:Sav
     const id=crypto.randomUUID();setWorkspace(w=>w?{...w,sections:[...w.sections,{id,name:clean}]}:w);return id
   }
   const renameSection=(id:string,name:string)=>setWorkspace(w=>w&&!w.sections.some(s=>s.id!==id&&s.name.toLocaleLowerCase()===projectName(name).toLocaleLowerCase())?{...w,sections:w.sections.map(s=>s.id===id?{...s,name:projectName(name)}:s)}:w)
-  return {workspace,ready,saveState,error,saveCurrent,open,create,rename,move,addSection,renameSection}
+  return {workspace,ready,saveState,error,saveCurrent,open,create,rename,remove,move,addSection,renameSection}
 }

@@ -25,12 +25,17 @@ export function initialWorkspace(settings:Settings,prices:Record<string,string>,
 }
 export function readProjectWorkspace(value:unknown):ProjectWorkspace{
   const w=value as ProjectWorkspace
-  if(!w||w.version!==1||!Array.isArray(w.projects)||!Array.isArray(w.sections)||!w.projects.length)throw new Error('The saved project library could not be read. Your stored data has not been replaced.')
+  if(!w||w.version!==1||!Array.isArray(w.projects)||!Array.isArray(w.sections)||!w.sections.length)throw new Error('The saved project library could not be read. Your stored data has not been replaced.')
   const ids=new Set<string>(),sections=new Set<string>()
   for(const s of w.sections){if(!s||typeof s.id!=='string'||typeof s.name!=='string'||!s.name.trim()||s.name.length>120||sections.has(s.id))throw new Error('Invalid saved project sections.');sections.add(s.id)}
   for(const p of w.projects){if(!p||typeof p.id!=='string'||ids.has(p.id)||typeof p.name!=='string'||!p.name.trim()||p.name.length>120||!sections.has(p.sectionId)||!['shape','boards','frame','finish','materials'].includes(p.stage)||!validSettings(p.settings)||!validPrices(p.prices)||![p.createdAt,p.updatedAt,p.lastOpenedAt].every(Number.isFinite))throw new Error('A saved project could not be read. Your stored data has not been replaced.');ids.add(p.id)}
-  if(!ids.has(w.activeId))throw new Error('The current saved project could not be found.')
+  if(w.projects.length?!ids.has(w.activeId):w.activeId!=='')throw new Error('The current saved project could not be found.')
   return w
+}
+export function removeProject(workspace:ProjectWorkspace,id:string):ProjectWorkspace{
+  if(!workspace.projects.some(p=>p.id===id))return workspace
+  const projects=workspace.projects.filter(p=>p.id!==id)
+  return {...workspace,projects,activeId:workspace.activeId===id?projects[0]?.id??'':workspace.activeId}
 }
 export function saveActiveProject(workspace:ProjectWorkspace,snapshot:ProjectSnapshot,now=Date.now()):ProjectWorkspace{
   if(!validSettings(snapshot.settings)||!validPrices(snapshot.prices))return workspace

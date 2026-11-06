@@ -6,7 +6,7 @@ import ProjectLibrary from './ProjectHome'
 import ReviewFiles from './ReviewFiles'
 import { useProjectWorkspace } from './useProjectWorkspace'
 import { parseProjectFile, projectFile } from './projectLibrary'
-import type { SavedProject } from './projectLibrary'
+import type { ProjectSnapshot, SavedProject } from './projectLibrary'
 import QuotationTotals from './QuotationTotals'
 import { quotationEstimate } from './quotationEstimate'
 import './DeckScene.css'
@@ -109,7 +109,7 @@ export default function App() {
   const [library,setLibrary]=useState<{initial?:LibraryProduct}|null>(null)
   const [status,setStatus]=useState(''),[storageError,setStorageError]=useState(false)
   const [measurements,setMeasurements]=useState(false),[editingSupports,setEditingSupports]=useState(false)
-  const loadProject=(project:SavedProject)=>{
+  const loadProject=(project:ProjectSnapshot)=>{
     setSettings(project.settings);setPrices(project.prices);setStage(project.stage);setHighlightMaterial(null)
     setCutoutPlacement(null);setSelectedCutout(null);setBoardEditing(false);setOutlineDirty(false);setBreakerDirty(false);setEditingSupports(false);setMeasurements(false);setStatus('')
   }
@@ -169,7 +169,7 @@ export default function App() {
     {!projectLibrary.ready?<main className="project-empty" role="status">Loading your projects…</main>:null}
 
     {library?<ProductLibrary storageUnavailable={storageError} products={products} settings={settings} initial={library.initial} onSave={setProducts} onApply={p=>{selectProduct(p,true);setHome(false)}} onClose={()=>setLibrary(null)} onImport={importProducts} onExport={exportProducts}/>:null}
-    {projectLibrary.ready&&home&&projectLibrary.workspace?<ProjectLibrary productCount={products.length} onProducts={()=>openProducts()} workspace={projectLibrary.workspace} onOpen={openProject} onCreate={createProject} onRename={projectLibrary.rename} onMove={projectLibrary.move} onAddSection={projectLibrary.addSection} onRenameSection={projectLibrary.renameSection} onImport={importProject} onExport={exportProject}/>:null}
+    {projectLibrary.ready&&home&&projectLibrary.workspace?<ProjectLibrary productCount={products.length} onProducts={()=>openProducts()} workspace={projectLibrary.workspace} onOpen={openProject} onCreate={createProject} onRename={projectLibrary.rename} onDelete={projectLibrary.remove} onMove={projectLibrary.move} onAddSection={projectLibrary.addSection} onRenameSection={projectLibrary.renameSection} onImport={importProject} onExport={exportProject}/>:null}
     {projectLibrary.ready&&!home?<>
 
     <div className="flow-title"><h1>{titles[stage]}</h1></div>
@@ -189,7 +189,7 @@ export default function App() {
       <section ref={canvas} className="canvas-panel flow-canvas">
         <div className="stage-canvas-header"><div><strong>{stage==='shape'?'Outline editor':stage==='boards'?boardEditing?'Breaker design preview':'Board layout':stage==='frame'?'Framing & pedestal positions':stage==='finish'?'Finished deck preview':'Materials & cutting schedule'}</strong>{stage==='frame'?<span className="support-layout-source">{plan?.frame.manual?'Custom support layout':'Automatic support generation'}</span>:null}</div>{stage==='boards'&&boardEditing?<button className="button quiet" onClick={()=>{if(breakerDirty){setStatus('Apply or discard the breaker draft before returning to the board plan.');return}setBoardEditing(false)}}>← Board plan</button>:null}<div className="stage-view-actions">{stage==='frame'?<><button className="button secondary" disabled={!plan||computed.pending} onClick={()=>setEditingSupports(true)}>Edit supports ⛶</button></>:null}</div></div>
         {stage==='shape'?<OutlineEditor key={JSON.stringify(settings.polygon)} polygon={settings.polygon} cutouts={settings.cutouts} selectedCutout={selectedCutout} onSelectCutout={setSelectedCutout} cutoutPlacement={cutoutPlacement} onCutoutPlacement={setCutoutPlacement} cutoutClearance={pictureFrameWidth(settings)+settings.board.gap/1000+.05} onCutoutsChange={cutouts=>saveCutouts({...settings,cutouts,edgeDetailConfirmed:false,confirmed:false})} onDirtyChange={setOutlineDirty} onApply={polygon=>{const invalid=cutoutPlacementError(polygon,settings.cutouts??[],pictureFrameWidth(settings)+settings.board.gap/1000+.05);if(invalid){setStatus(invalid);return}const x=Math.min(...polygon.map(p=>p.x)),y=Math.min(...polygon.map(p=>p.y));setOutlineDirty(false);setSettings({...settings,polygon:normalize(polygon),perimeterEdges:polygon.length===settings.polygon.length?settings.perimeterEdges:undefined,cutouts:settings.cutouts?.map(h=>({...h,polygon:h.polygon.map(p=>({x:p.x-x,y:p.y-y}))})),edgeDetailConfirmed:false});setStatus('')}}/>:null}
-        {stage==='boards'&&boardEditing?<BreakerDesigner key={JSON.stringify([settings.polygon,settings.direction,settings.board,settings.joints,settings.breakerWidth,settings.frame,settings.pedestalDiameter])} settings={settings} plan={plan} onDirtyChange={setBreakerDirty} onApply={next=>{setSettings(next);setBreakerDirty(false);setStatus('')}}/>:null}
+        {stage==='boards'&&boardEditing?<BreakerDesigner key={JSON.stringify([settings.polygon,settings.direction,settings.board,settings.joints,settings.breakerWidth,settings.frame,settings.pedestalDiameter])} settings={settings} plan={plan} onDirtyChange={setBreakerDirty} onApply={next=>{setSettings(next);setBreakerDirty(false);setBoardEditing(false);setStatus('')}}/>:null}
         {stage==='boards'&&!boardEditing&&plan?<><DeckView plan={plan} settings={settings} layer="boards" showSupports={true}/><BoardFit plan={plan} settings={settings}/></>:null}
         {stage==='frame'&&plan?<><SupportViews plan={plan} settings={settings} measurements={measurements} onMeasurements={setMeasurements}/>{measurements?<p className="measurement-key">All dimensions in mm · Support dimensions are centre-to-centre; identical parallel intervals are shown once · Exact support positions remain in the CSV.</p>:null}<SupportAudit plan={plan} settings={settings}/></>:null}
         {stage==='finish'&&plan?<DeckView plan={plan} settings={settings} layer="3d" showSupports={true} prices={resolvedPricing(settings,prices)} onShowMaterial={key=>{setHighlightMaterial(key);setStage('materials')}}/>:null}

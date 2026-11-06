@@ -220,7 +220,7 @@ Supports measurement mode and the installer PDF put pedestal centre-to-centre di
 
 ## Project library and consolidated files
 
-The BetterPlan home hub keeps projects in the main grid and gives Products a dedicated catalogue panel. Recent and All projects views share search and a section filter; Manage sections contains the add/rename controls. On smaller screens the catalogue becomes a compact entry above the projects. Project creation uses the currently selected section.
+The BetterPlan home hub keeps projects in the main grid and gives Products a dedicated catalogue panel. Recent and All projects views share search and a section filter; Manage sections contains the add/rename controls. On smaller screens the catalogue becomes a compact entry above the projects. Project creation uses the currently selected section. Each project card has **Delete project**, which asks for confirmation with the project name before removing it from this browser. Cancel keeps the project. Deleting the last project leaves an empty library where you can create or import a new project.
 
 The library stores each project independently: outline/openings, product snapshots, survey, quotation details, rate overrides, name, section, creation/edit/open dates and last editor step. Recent shows the twelve most recently opened matching projects; All projects sorts by last edit. Sections filter either view. Search matches project names, customer names and references. Each card has a deterministic isometric deck preview derived from its outline, openings, finish and board direction without solving its support layout.
 

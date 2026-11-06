@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { DEFAULT_SETTINGS } from '../src/planner.ts'
-import { DEFAULT_SECTIONS, initialWorkspace, makeProject, parseProjectFile, projectFile, readProjectWorkspace, saveActiveProject, visibleProjects } from '../src/projectLibrary.ts'
+import { DEFAULT_SECTIONS, initialWorkspace, makeProject, parseProjectFile, projectFile, readProjectWorkspace, removeProject, saveActiveProject, visibleProjects } from '../src/projectLibrary.ts'
 import { projectThumbnail } from '../src/projectThumbnail.ts'
 
 test('legacy current and previous decks migrate without sharing project state',()=>{
@@ -26,6 +26,30 @@ test('saving only updates the active project and preserves the catalogue metadat
   assert.equal(next.projects[1],b);assert.equal(w.projects[0].settings.height,DEFAULT_SETTINGS.height)
   assert.equal(saveActiveProject(next,edited,4),next,'Unchanged renders do not repeatedly save')
   assert.equal(saveActiveProject(next,{...edited,settings:{...edited.settings,height:-1}},4),next,'Invalid draft settings do not replace the saved design')
+})
+
+test('deleting projects preserves the remaining data and selects a valid active project',()=>{
+  const a=makeProject('Home','residential',{settings:{...DEFAULT_SETTINGS,height:375},prices:{boards:'17'},stage:'finish'},'a',1)
+  const b=makeProject('Hotel','commercial',{settings:DEFAULT_SETTINGS,prices:{boards:'0'},stage:'boards'},'b',2)
+  const w={version:1 as const,activeId:'a',projects:[a,b],sections:DEFAULT_SECTIONS}
+  const other=removeProject(w,'b')
+  assert.equal(other.activeId,'a');assert.deepEqual(other.projects,[a]);assert.equal(other.sections,w.sections)
+  const active=removeProject(w,'a')
+  assert.equal(active.activeId,'b');assert.deepEqual(active.projects,[b]);assert.equal(active.projects[0],b)
+  assert.deepEqual(readProjectWorkspace(JSON.parse(JSON.stringify(active))),active)
+  assert.equal(removeProject(w,'missing'),w);assert.deepEqual(w.projects,[a,b])
+})
+
+test('deleting the last project persists an empty library without restoring the deleted design',()=>{
+  const w=initialWorkspace(DEFAULT_SETTINGS,{boards:'17'})
+  const empty=removeProject(w,w.activeId)
+  assert.deepEqual(empty.projects,[]);assert.equal(empty.activeId,'');assert.deepEqual(empty.sections,w.sections)
+  assert.deepEqual(readProjectWorkspace(JSON.parse(JSON.stringify(empty))),empty)
+  assert.equal(saveActiveProject(empty,w.projects[0]),empty,'Stale editor state cannot recreate a deleted project')
+  assert.throws(()=>readProjectWorkspace({...empty,activeId:w.activeId}),/could not be found/)
+  assert.throws(()=>readProjectWorkspace({...empty,sections:[]}),/could not be read/)
+  const fresh=makeProject('New deck',empty.sections[0].id)
+  assert.deepEqual(readProjectWorkspace({...empty,activeId:fresh.id,projects:[fresh]}).projects,[fresh])
 })
 
 test('project files round-trip names, sections, prices, customer data and legacy stock',()=>{
