@@ -1,69 +1,63 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
-import type { PDFPage } from 'pdf-lib'
+import { PDFDocument, rgb } from 'pdf-lib'
+import qrcode from 'qrcode-generator'
 import type { Plan, Settings } from './planner.ts'
-import { bounds } from './planner.ts'
 import { installerPlan } from './installerPlan.ts'
 import { quotationEstimate, quotationSummary, QUOTATION_EXCLUSIONS } from './quotationEstimate.ts'
-import { pdfBrand } from './pdfBrand.ts'
+import { installationLink } from './quotationDetails.ts'
+import { QUOTE_COLOURS as c, quotationDocument, quoteDate, quoteMoney, quoteRate, quoteReference } from './quotationDocument.ts'
 
-const MM=72/25.4,green=rgb(.38,.42,.17),ink=rgb(.19,.23,.16),muted=rgb(.43,.47,.38)
-const printable=(s:string)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[–—]/g,'-').replace(/[’]/g,"'").replace(/[^\x20-\x7e\n€®²×°±·]/g,' ')
-export type QuotationPdfOptions={now?:Date;logo?:Uint8Array;preview?:Uint8Array}
+export type QuotationPdfOptions={now?:Date;logo?:Uint8Array;preview?:Uint8Array;omitFooter?:boolean}
 export async function exportQuotationPdf(plan:Plan,s:Settings,prices:Record<string,string>,options:QuotationPdfOptions={}){
-  const doc=await PDFDocument.create(),font=await doc.embedFont(StandardFonts.Helvetica),bold=await doc.embedFont(StandardFonts.HelveticaBold),brand=await pdfBrand(doc,options.logo)
-  const preview=options.preview?await doc.embedPng(options.preview):undefined,now=options.now??new Date(),estimate=quotationEstimate(plan,s,prices),q=s.quotation??{},reference=q.projectReference?.trim()||installerPlan(plan,s).reference
-  const date=new Intl.DateTimeFormat('en-IE',{dateStyle:'medium',timeZone:'Europe/Dublin'}).format(now),money=(cents:number)=>`€${(cents/100).toFixed(2)}`
-  doc.setTitle(`BetterDeck® materials quotation ${reference}`);doc.setAuthor('BetterDeck');doc.setCreator('BetterPlan');doc.setCreationDate(now);doc.setModificationDate(now)
-  const text=(page:PDFPage,value:string,x:number,y:number,size=3,strong=false,color=ink)=>page.drawText(printable(value).replaceAll('\n',' '),{x:x*MM,y:page.getHeight()-y*MM,size:size*MM,font:strong?bold:font,color})
-  const wrap=(value:string,width:number,size=3)=>{
-    const lines:string[]=[]
-    for(const raw of printable(value).split('\n')){
-      let line=''
-      for(const char of raw){if(line&&font.widthOfTextAtSize(line+char,size*MM)>width*MM){const space=line.lastIndexOf(' ');if(space>line.length*.5){lines.push(line.slice(0,space));line=line.slice(space+1)+char}else{lines.push(line);line=char}}else line+=char}
-      lines.push(line)
-    }
-    return lines
+  const doc=await PDFDocument.create(),now=options.now??new Date(),q=s.quotation??{},reference=quoteReference(q,installerPlan(plan,s).reference),estimate=quotationEstimate(plan,s,prices)
+  doc.setTitle(`BetterDeck® quotation ${reference}`);doc.setAuthor('BetterDeck');doc.setCreator('BetterPlan');doc.setCreationDate(now);doc.setModificationDate(now)
+  const p=await quotationDocument(doc,reference,q,now,options.logo)
+  p.next('Your quotation')
+  if(!options.omitFooter&&q.customerName?.trim())p.paragraph(`Prepared for: ${q.customerName}`,2.8)
+  for(const [label,value] of [['Project reference',q.projectReference],['Account number',q.accountNumber],['Customer order',q.customerOrderNumber],['Valid until',q.validUntil?quoteDate(new Date(`${q.validUntil}T12:00:00Z`)):undefined]] as const)if(value?.trim())p.paragraph(`${label}: ${value}`,2.8)
+  if(options.preview)await p.image(options.preview,65)
+  const header=()=>{p.rect(16,p.y,178,9,c.green);['Description','Qty','Unit','Unit rate','Net amount'].forEach((h,i)=>p.text(h,[19,111,126,163,191][i],p.y+6,2.5,true,c.white,i>2));p.y+=9}
+  p.ensure(30);header()
+  let group='',rowIndex=0
+  for(const line of estimate.lines){
+    const nextGroup=line.sectionId==='extras'?'Extras':`${line.sectionName} · ${line.group}`,description=p.wrap(line.name,86,2.8),unit=p.wrap(line.unit,19,2.5),pending=line.pending||line.rate===null
+    const groupLines=p.wrap(nextGroup,172,2.7,true),groupHeight=Math.max(8,groupLines.length*4.5+3)
+    const height=Math.max(9,Math.max(description.length*4.4,unit.length*4.1)+4)+(pending?5:0),newGroup=group!==nextGroup
+    if(p.y+height+(newGroup?groupHeight:0)>269){p.next('Your quotation - continued');header();group=''}
+    if(group!==nextGroup){p.rect(16,p.y,178,groupHeight,c.pale);groupLines.forEach((v,i)=>p.text(v,19,p.y+5.5+i*4.5,2.7,true,c.green));p.y+=groupHeight;group=nextGroup}
+    if(rowIndex++%2)p.rect(16,p.y,178,height,rgb(.98,.985,.97))
+    description.forEach((v,i)=>p.text(v,19,p.y+5.8+i*4.4,2.8))
+    p.fittedText(line.pending?'Pending':String(line.qty),111,p.y+5.8,13,2.7)
+    unit.forEach((v,i)=>p.text(v,126,p.y+5.8+i*4.1,2.5))
+    p.fittedText(line.rate===null?'Missing':quoteRate(line.rate),163,p.y+5.8,17,2.7,false,c.ink,true)
+    p.fittedText(line.cents===null?'Pending':quoteMoney(line.cents),191,p.y+5.8,25,2.8,true,c.ink,true)
+    if(pending)p.text(line.pending?'Quantity / description needs confirmation':'Unit rate required',19,p.y+height-3,2.3,false,c.muted)
+    p.y+=height
   }
-  const columns=[14,101,119,140,164],headers=['Component','Qty','Unit','Unit rate','Amount']
-  let page:PDFPage,y=0
-  const tableHeader=()=>{
-    page.drawRectangle({x:14*MM,y:page.getHeight()-(y+9)*MM,width:182*MM,height:9*MM,color:green})
-    headers.forEach((h,i)=>text(page,h,columns[i]+2,y+6,2.8,true,rgb(1,1,1)));y+=9
+  p.ensure(45);p.y+=7
+  for(const [i,row] of quotationSummary(estimate).entries()){
+    const last=i===4;if(last)p.rect(16,p.y-3,178,10,c.green)
+    p.text(row.label,19,p.y+2,2.9,last,last?c.white:c.ink)
+    p.fittedText(row.cents===null?'Pending':quoteMoney(row.cents),191,p.y+2,43,3.1,true,last?c.white:c.green,true);p.y+=last?13:6
   }
-  const next=(table=false)=>{
-    page=doc.addPage([210*MM,297*MM]);brand(page);text(page,'Materials quotation',64,25,5,true,green)
-    text(page,reference,14,40,2.8);text(page,date,154,40,2.8)
-    page.drawLine({start:{x:14*MM,y:page.getHeight()-44*MM},end:{x:196*MM,y:page.getHeight()-44*MM},color:green,thickness:.5*MM})
-    y=53;if(table)tableHeader()
+  p.paragraph(`${estimate.priced} of ${estimate.lines.length} item rates entered.${estimate.pending?' Some quantities or item descriptions still require confirmation.':''}`,2.5,false,c.muted)
+  if(q.scope?.trim()){p.heading('Project scope');p.paragraph(q.scope)}
+  p.paragraph(q.fulfilment==='collection'?'Collection from BetterDeck. No delivery charge.':`Delivery: ${quoteMoney(estimate.deliveryCents)} excluding VAT. Confirm arrangements before ordering.`,2.8)
+  if(q.inclusions?.trim()){p.heading('Included');p.paragraph(q.inclusions)}
+  if(q.exclusions?.trim()){p.heading('Excluded');p.paragraph(q.exclusions)}
+  p.paragraph(QUOTATION_EXCLUSIONS,2.4,false,c.muted)
+  for(const section of estimate.sections)if(section.settings.joistSpacing>400)p.paragraph(`${section.name}: entered joist centres ${section.settings.joistSpacing} mm exceed the report's 400 mm limit. Board supplier approval required.`,2.6)
+  if(q.terms?.trim()){p.heading('Payment & quotation terms');p.paragraph(q.terms)}
+  if(q.notes?.trim()){p.heading('Quotation notes');p.paragraph(q.notes,2.8)}
+  p.heading('Next steps')
+  p.paragraph(q.acceptance?.trim()||`To accept or request changes, contact BetterDeck at info@betterdeck.ie or +353 49 437-2667, quoting ${reference}. Confirm quantities with your installer before placing an order.`,2.8)
+  const url=installationLink(q.installationUrl)
+  if(url){
+    const qr=qrcode(0,'M');qr.addData(url);qr.make();const count=qr.getModuleCount(),quiet=4,size=30,module=size/(count+quiet*2)
+    p.ensure(40);p.y+=3;p.rect(16,p.y,size,size,c.white)
+    for(let row=0;row<count;row++)for(let col=0;col<count;col++)if(qr.isDark(row,col))p.rect(16+(col+quiet)*module,p.y+(row+quiet)*module,module,module,c.ink)
+    p.link('Open installation guide',url,52,p.y+10,110,10)
+    p.text('Scan the QR code or click the link.',52,p.y+17,2.6,false,c.muted);p.y+=36
   }
-  const paragraph=(value:string,size=3,strong=false)=>{
-    for(const line of wrap(value,180,size)){if(y>270)next();text(page!,line,14,y,size,strong);y+=size*1.6}y+=3
-  }
-  next()
-  for(const [label,value] of ([['Prepared for',q.customerName],['Customer address',q.customerAddress],['Eircode',q.customerEircode],['Site address',q.siteAddress]] as const))if(value?.trim())paragraph(`${label}: ${value}`)
-  const box=bounds(plan.physical)
-  paragraph(`${Math.round(box.width*1000)} × ${Math.round(box.depth*1000)} mm overall · ${plan.area.toFixed(2)} m²`,3.2,true)
-  paragraph(`${s.board.colourName} · ${s.board.stock} m decking stock · Provisional quotation`,2.8)
-  if(preview){if(y+64>260)next();page!.drawImage(preview,{x:50*MM,y:page!.getHeight()-(y+61.1)*MM,width:110*MM,height:61.1*MM});y+=66}
-  if(y+22>260)next()
-  tableHeader()
-  for(const [i,line] of estimate.lines.entries()){
-    const lines=wrap(line.name,82),height=Math.max(12,lines.length*4.5+8)
-    if(y+height>265)next(true)
-    if(i%2)page!.drawRectangle({x:14*MM,y:page!.getHeight()-(y+height)*MM,width:182*MM,height:height*MM,color:rgb(.96,.97,.92)})
-    lines.forEach((v,j)=>text(page!,v,16,y+5+j*4.5,3))
-    text(page!,line.pending?'Pending':String(line.qty),103,y+5,2.8);text(page!,line.unit,121,y+5,2.7)
-    text(page!,line.rate===null?'Missing':`€${line.rate.toFixed(2)}`,142,y+5,2.8);text(page!,line.cents===null?'Pending':money(line.cents),166,y+5,2.8,true)
-    if(line.pending||line.rate===null)text(page!,line.pending?'Support quantity pending':'Unit rate missing',16,y+height-3,2.3,false,muted)
-    y+=height
-  }
-  if(y+57>270)next()
-  y+=8
-  for(const row of quotationSummary(estimate)){text(page!,row.label,16,y,3.1,true,green);text(page!,row.cents===null?'Pending':money(row.cents),163,y,3.3,true,green);y+=8}
-  y+=3
-  for(const note of [`${estimate.priced} of ${estimate.lines.length} rates entered.${estimate.pending?' Support and connector quantities are pending.':''}`,QUOTATION_EXCLUSIONS,...(s.joistSpacing>400?[`Entered joist centres: ${s.joistSpacing} mm; exceeds the report's 400 mm limit. Board supplier approval required.`]:[])])paragraph(note,2.6)
-  if(q.notes?.trim())paragraph(`Quotation notes: ${q.notes}`,2.8)
-  const pages=doc.getPages(),count=pages.length
-  pages.forEach((p,i)=>{text(p,`BetterDeck® · ${reference}`,14,289,2.3,false,muted);text(p,`${i+1} / ${count}`,183,289,2.3,false,muted)})
+  if(!options.omitFooter)p.footer()
   return doc.save()
 }

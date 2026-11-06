@@ -236,3 +236,13 @@ The library is local to the current browser/origin, with no account or cloud syn
 
 Version-1 JSON exports add optional project name/section metadata and retain product profiles, resolved price snapshots and manual overrides. Existing version-1 files remain accepted. Import creates a new project, merges catalogues without overwriting conflicting saved products, and restores or creates its named section. Project import and backups live on the Projects screen. Catalogue import and backups live in the Products dialog, in its collapsed Import & backup section. Review contains only customer/installer PDFs and CSV reports.
 
+### Customer proposal upgrade
+
+Review includes a live customer proposal with four saved camera angles, design specifications, all quoted items and combined totals. The PDF leads with a large finished-deck illustration and total, followed by grouped itemised prices, commercial details, scope, terms and next steps, then a dimensioned layout for every quoted deck. Images retain their aspect ratio. Longer text and larger quotes paginate automatically. Render colours are indicative; manually quoted extras are not represented in the geometry.
+
+Quotation fields add quotation/account/order numbers, revision, expiry date, named deck sections, scope, inclusions, exclusions, terms, acceptance instructions and an optional installation-guide URL. The URL creates a local vector QR code and clickable PDF link. Contact details follow the supplied BetterDeck quotation example. Collection sets delivery to zero; VAT remains explicitly entered rather than assumed.
+
+Up to eight additional saved decks can be added as independent snapshots of their design and resolved material rates. Their quotation details, extras, VAT and delivery are excluded from the snapshot. Removing and re-adding refreshes a section; editing or deleting its source project does not silently change the quote. Version-1 project backups retain the optional fields and snapshots; nested quotations and malformed imported designs are rejected.
+
+Up to 100 manually priced extras support a description, positive quantity, unit and optional unit rate, including explicitly free items. A blank description or missing rate keeps the quotation incomplete. PDF, quote CSV, Review and the legacy Excel exporter share rounded line cents and combined totals. Cutting lists and the main materials table still describe the active deck only. Zero-quantity resolved lines are omitted from customer quotations; unresolved required quantities remain visible and prevent a complete total.
+

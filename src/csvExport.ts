@@ -57,18 +57,18 @@ function boardShape(plan:Plan,s:Settings,index:number){
 export function buildCsvReport(kind:CsvKind,plan:Plan,s:Settings,prices:Record<string,string>):CsvReport{
   const estimate=materialEstimate(plan,prices)
   if(kind==='materials'||kind==='quote'){
-    const quote=kind==='quote'
+    const quote=kind==='quote',quoted=quotationEstimate(plan,s,prices),items=quote?quoted:estimate
     const headers=quote?['Record','Item ID','Component','Quantity','Unit','Unit rate EUR','Line total EUR','Status','Notes']:['Record','Item ID','Component','Quantity','Unit','Stock length mm','Width mm','Thickness / profile height mm','Unit rate EUR','Line total EUR','Status','Notes']
-    const rows:CsvCell[][]=estimate.lines.map(q=>{
+    const rows:CsvCell[][]=items.lines.map(q=>{
       const stock=q.key==='boards'||q.key==='skirting'?mm(s.board.stock):q.key.startsWith('profile')?mm(s.frameStock):null
       const width=q.key==='boards'?s.board.width:q.key==='skirting'?fasciaBoardWidth(s):null
       const thickness=q.key==='boards'?s.board.thickness:q.key.startsWith('profile')?Number(q.key.slice(7)):null
       const status=q.pending?'Quantity pending':q.rate===null?'Price missing':'Priced; provisional quantity'
       const base:CsvCell[]=['Item',q.key,q.name,q.pending?null:q.qty,q.unit]
-      return [...base,...(quote?[]:[stock,width,thickness]),q.rate,q.cents===null?null:q.cents/100,status,q.note]
+      return [...base,...(quote?[]:[stock,width,thickness]),q.rate,q.cents===null?null:q.cents/100,status,quote&&'sectionName' in q?`${q.sectionName} · ${q.note}`:q.note]
     })
-    const summary:CsvCell[]=['Summary','',estimate.complete?'Entered materials total':'Known priced subtotal',null,'']
-    rows.push([...summary,...(quote?[]:[null,null,null]),null,estimate.priced?estimate.subtotalCents/100:null,estimate.complete?'All material rates entered':estimate.pending?'INCOMPLETE: quantities pending':'INCOMPLETE: prices missing',quote?QUOTATION_EXCLUSIONS:exclusions])
+    const summary:CsvCell[]=['Summary','',items.complete?(quote?'Items subtotal':'Entered materials total'):'Known priced subtotal',null,'']
+    rows.push([...summary,...(quote?[]:[null,null,null]),null,items.priced?items.subtotalCents/100:null,items.complete?'All item rates entered':items.pending?'INCOMPLETE: quantities pending':'INCOMPLETE: prices missing',quote?QUOTATION_EXCLUSIONS:exclusions])
     if(quote){const quotation=quotationEstimate(plan,s,prices);for(const row of quotationSummary(quotation).slice(1))rows.push(['Summary','',row.label,null,'',null,row.cents===null?null:row.cents/100,quotation.complete?(quotation.vatRate===null?'VAT rate required':'Provisional'):'INCOMPLETE',QUOTATION_EXCLUSIONS])}
     rows.push(['Status','','Project review',null,'',...(quote?[]:[null,null,null]),null,null,supportStatus(plan),`${plan.heightFits?'Pedestal height range fits.':'Pedestal height range needs correction.'} ${!plan.boards.fit.needsAdjustment?'':'Infill fit needs review. '}${s.skirting&&plan.skirtingGap<0?'Fascia extends below ground. ':''}Board compatibility: ${s.confirmed?'recorded':'unconfirmed'}. Edge detail: ${s.edgeDetailConfirmed?'recorded':'unconfirmed'}. Applied fascia recess: ${mm(plan.frame.fasciaClearance)} mm; maximum metal projection: ${mm(Math.max(0,...plan.frame.projections.map(q=>q.distance)))} mm. Supplier projection limits and connector capacities require verification.`])
     return {headers,rows}

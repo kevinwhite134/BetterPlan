@@ -9,8 +9,8 @@ import { PEDESTAL_COLUMN_DIAMETER } from './frameHardware.ts'
 
 // A fixed-camera finished view of the actual plan, shared by the report header
 // and its Excel image. No controls or layer selection affect this snapshot.
-export function deckPreviewSvg(plan:Plan,s:Settings):string{
-  const box=bounds(plan.physical),angle=35*Math.PI/180,tilt=52*Math.PI/180
+export function deckPreviewSvg(plan:Plan,s:Settings,viewAngle=35):string{
+  const box=bounds(plan.physical),angle=viewAngle*Math.PI/180,tilt=52*Math.PI/180
   const physical=(p:Point)=>s.direction==='vertical'?{x:p.y,y:p.x}:p
   const project=(p:Point,z=0)=>{const q=physical(p),x=q.x-box.width/2,y=q.y-box.depth/2;return {x:x*Math.cos(angle)-y*Math.sin(angle),y:(x*Math.sin(angle)+y*Math.cos(angle))*Math.cos(tilt)-z*Math.sin(tilt)}}
   const coordinates=(p:Point[],z=0)=>p.map(q=>project(q,z)).map(q=>`${q.x.toFixed(4)},${q.y.toFixed(4)}`).join(' ')

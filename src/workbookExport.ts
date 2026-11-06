@@ -47,20 +47,21 @@ function note(ws:ExcelJS.Worksheet,row:number,text:string,count:number,warning=f
 export function createDeckWorkbook(plan:Plan,s:Settings,prices:Record<string,string>,now=new Date(),previewPng?:string){
   const wb=new ExcelJS.Workbook();wb.creator='BetterDeck';wb.created=now;wb.modified=now;wb.calcProperties.fullCalcOnLoad=true
   const date=new Intl.DateTimeFormat('en-IE',{day:'2-digit',month:'short',year:'numeric',timeZone:'Europe/Dublin'}).format(now)
-  const estimate=materialEstimate(plan,prices),quotation=quotationEstimate(plan,s,prices),end=firstRow+estimate.lines.length-1
+  const quotation=quotationEstimate(plan,s,prices),extended=!!(s.quotation?.additionalDecks?.length||s.quotation?.extras?.length)
+  const estimate=extended?quotation:materialEstimate(plan,prices),end=firstRow+estimate.lines.length-1
   const previewImage=previewPng?wb.addImage({base64:previewPng,extension:'png'}):undefined
   const quote=setup(wb,'Quote','Materials quote','Rates are editable on the Materials tab. This quote updates from those rates.',[44,11,13,18,18,28],plan,s,date,previewImage)
-  const materials=setup(wb,'Materials','Material take-off','Enter unit rates in the blue cells. Amber cells need a price; pending quantities remain blank.',[36,9,10,12,10,13,14,14,25],plan,s,date,previewImage)
+  const materials=setup(wb,'Materials',extended?'All quotation items':'Material take-off','Enter unit rates in the blue cells. Amber cells need a price; pending quantities remain blank.',[36,9,10,12,10,13,14,14,25],plan,s,date,previewImage)
   tableHeader(quote,['Component','Quantity','Unit','Unit rate EUR','Amount EUR','Status'])
   tableHeader(materials,['Component','Quantity','Unit','Stock length mm','Width mm','Profile / thickness mm','Unit rate EUR','Amount EUR','Status'])
   const materialRows=buildCsvReport('materials',plan,s,prices).rows
   estimate.lines.forEach((line,i)=>{
-    const r=firstRow+i,raw=materialRows[i]
-    materials.getRow(r).values=[line.name,line.pending?null:line.qty,line.unit,raw[5],raw[6],raw[7],line.rate,{formula:`IF(AND(ISNUMBER(B${r}),ISNUMBER(G${r})),ROUND(B${r}*G${r},2),"")`,result:line.cents===null?'':line.cents/100},{formula:`IF(NOT(ISNUMBER(B${r})),"Quantity pending",IF(NOT(ISNUMBER(G${r})),"Price missing","Priced; provisional"))`,result:line.pending?'Quantity pending':line.rate===null?'Price missing':'Priced; provisional'}]
+    const r=firstRow+i,raw=extended?[]:materialRows[i],name='sectionName' in line&&line.sectionName!=='Extras'?`${line.sectionName}: ${line.name}`:line.name
+    materials.getRow(r).values=[name,line.pending?null:line.qty,line.unit,raw[5],raw[6],raw[7],line.rate,{formula:`IF(AND(ISNUMBER(B${r}),ISNUMBER(G${r})),ROUND(B${r}*G${r},2),"")`,result:line.cents===null?'':line.cents/100},{formula:`IF(NOT(ISNUMBER(B${r})),"Quantity pending",IF(NOT(ISNUMBER(G${r})),"Price missing","Priced; provisional"))`,result:line.pending?'Quantity pending':line.rate===null?'Price missing':'Priced; provisional'}]
     bodyStyle(materials,r,9)
     materials.getCell(r,7).font={...font,color:{argb:C.blue}};materials.getCell(r,7).numFmt=rateMoney;materials.getCell(r,8).numFmt=money;materials.getCell(r,8).alignment={horizontal:'right',vertical:'middle'}
     materials.getCell(r,7).dataValidation={type:'decimal',operator:'greaterThanOrEqual',formulae:[0],allowBlank:true,showErrorMessage:true,errorTitle:'Enter a unit rate',error:'Use zero or a positive number.'}
-    quote.getRow(r).values=[line.name,{formula:`IF(ISNUMBER(Materials!B${r}),Materials!B${r},"")`,result:line.pending?'':line.qty},line.unit,{formula:`IF(ISNUMBER(Materials!G${r}),Materials!G${r},"")`,result:line.rate??''},{formula:`IF(ISNUMBER(Materials!H${r}),Materials!H${r},"")`,result:line.cents===null?'':line.cents/100},{formula:`Materials!I${r}`,result:line.pending?'Quantity pending':line.rate===null?'Price missing':'Priced; provisional'}]
+    quote.getRow(r).values=[name,{formula:`IF(ISNUMBER(Materials!B${r}),Materials!B${r},"")`,result:line.pending?'':line.qty},line.unit,{formula:`IF(ISNUMBER(Materials!G${r}),Materials!G${r},"")`,result:line.rate??''},{formula:`IF(ISNUMBER(Materials!H${r}),Materials!H${r},"")`,result:line.cents===null?'':line.cents/100},{formula:`Materials!I${r}`,result:line.pending?'Quantity pending':line.rate===null?'Price missing':'Priced; provisional'}]
     bodyStyle(quote,r,6);quote.getCell(r,4).numFmt=rateMoney;quote.getCell(r,5).numFmt=money
     for(const col of [2,4,5])quote.getCell(r,col).alignment={horizontal:'right',vertical:'middle'}
   })

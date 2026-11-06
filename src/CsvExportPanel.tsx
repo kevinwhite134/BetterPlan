@@ -9,8 +9,11 @@ import { buildCsvReport, CSV_REPORTS, serializeCsv } from './csvExport'
 import type { CsvKind } from './csvExport'
 import type { Plan, Settings } from './planner'
 import { deckPreviewPng, deckPreviewSvg, deckPreviewUrl } from './deckPreview'
+import QuotationPreview from './QuotationPreview'
+import { QUOTATION_VIEWS } from './quotationDetails'
+import { quotationSections } from './quotationSections'
 
-export default function CsvExport({plan,settings,prices,onDownload}:{plan:Plan;settings:Settings;prices:Record<string,string>;onDownload:(filename:string,content:string|ArrayBuffer,type?:string)=>void}){
+export default function CsvExport({plan,settings,prices,onDownload,onChange}:{plan:Plan;settings:Settings;prices:Record<string,string>;onChange:(s:Settings)=>void;onDownload:(filename:string,content:string|ArrayBuffer,type?:string)=>void}){
   const [kind,setKind]=useState<CsvKind>('materials'),[delimiter,setDelimiter]=useState<','|';'>(',')
   const [busy,setBusy]=useState(false),[error,setError]=useState('')
   const report=useMemo(()=>buildCsvReport(kind,plan,settings,prices),[kind,plan,settings,prices])
@@ -20,8 +23,21 @@ export default function CsvExport({plan,settings,prices,onDownload}:{plan:Plan;s
   const columns=pricing?['Component','Quantity','Unit','Unit rate EUR','Line total EUR','Status']:report.headers
   const indices=columns.map(q=>report.headers.indexOf(q)),previewRows=(pricing?report.rows.filter(q=>q[0]==='Item'):report.rows).slice(0,8)
   const currency=new Intl.NumberFormat('en-IE',{style:'currency',currency:'EUR'}),rateCurrency=new Intl.NumberFormat('en-IE',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:4}),number=new Intl.NumberFormat('en-IE',{maximumFractionDigits:2})
-  const customerPack=async()=>{setBusy(true);setError('');try{const [{exportCustomerQuotePack},{loadBetterDeckLogo},render,layout]=await Promise.all([import('./customerQuotePack'),import('./pdfBrand'),deckPreviewPng(deckSvg),deckPreviewPng(customerPlanSvg(plan,settings),1440,1000)]);const [logo,preview,planPreview]=await Promise.all([loadBetterDeckLogo(),fetch(render).then(r=>r.arrayBuffer()).then(b=>new Uint8Array(b)),fetch(layout).then(r=>r.arrayBuffer()).then(b=>new Uint8Array(b))]);const bytes=await exportCustomerQuotePack(plan,settings,prices,{logo,preview,planPreview});onDownload('betterdeck-quotation.pdf',Uint8Array.from(bytes).buffer,'application/pdf')}catch{setError('The quotation PDF could not be created. Please try again.')}finally{setBusy(false)}}
+  const customerPack=async()=>{
+    setBusy(true);setError('')
+    try{
+      const angle=(QUOTATION_VIEWS.find(v=>v.value===settings.quotation?.view)??QUOTATION_VIEWS[0]).angle
+      const png=async(svg:string,width=1800,height=1000)=>new Uint8Array(await (await fetch(await deckPreviewPng(svg,width,height))).arrayBuffer())
+      const [{exportCustomerQuotePack},{loadBetterDeckLogo},sectionPreviews]=await Promise.all([import('./customerQuotePack'),import('./pdfBrand'),Promise.all(quotationSections(plan,settings,prices).map(async section=>{
+        const [preview,planPreview]=await Promise.all([png(deckPreviewSvg(section.plan,section.settings,angle)),png(customerPlanSvg(section.plan,section.settings),1800,1250)])
+        return {id:section.id,preview,planPreview}
+      }))])
+      const bytes=await exportCustomerQuotePack(plan,settings,prices,{logo:await loadBetterDeckLogo(),preview:sectionPreviews[0].preview,planPreview:sectionPreviews[0].planPreview,sectionPreviews})
+      onDownload('betterdeck-quotation.pdf',Uint8Array.from(bytes).buffer,'application/pdf')
+    }catch{setError('The quotation PDF could not be created. Please try again.')}finally{setBusy(false)}
+  }
   return <section className="csv-export" aria-label="PDF downloads and CSV reports">
+    <QuotationPreview plan={plan} settings={settings} prices={prices} onChange={onChange}/>
     <div className="pdf-downloads" aria-label="PDF downloads">
       <div className="pdf-download-card"><span className="download-format" aria-hidden="true">PDF</span><h3 id="csv-export-title">Customer quotation</h3><p>Customer details, a 3D deck view, itemised prices and the deck layout.</p><button type="button" className="button primary" disabled={busy} aria-busy={busy} onClick={customerPack}>{busy?'Creating quotation…':'↓ Download quotation PDF'}</button></div>
       <div className="pdf-download-card"><span className="download-format" aria-hidden="true">PDF</span><h3>Installation plan</h3><p>Measured drawing, colour-coded 3D supports and installation references.</p><InstallerPlanDownload plan={plan} settings={settings}/></div>
@@ -42,7 +58,7 @@ export default function CsvExport({plan,settings,prices,onDownload}:{plan:Plan;s
       </div>
       <div className="table-scroll"><table><thead><tr>{columns.map(header=><th key={header}>{header.replace('Line total EUR','Amount').replace('Unit rate EUR','Unit rate')}</th>)}</tr></thead><tbody>{previewRows.map((row,i)=><tr key={i}>{indices.map((index,j)=>{const cell=row[index],money=columns[j].includes('EUR'),status=columns[j]==='Status';return <td key={j} className={`${typeof cell==='number'?'paper-numeric':''} ${status?'paper-status':''}`} title={cell===null?'':String(cell)}>{cell===null?<span className="paper-empty">—</span>:typeof cell==='number'?money?(columns[j].startsWith('Unit rate')?rateCurrency:currency).format(cell):number.format(cell):cell}</td>})}</tr>)}</tbody></table></div>
       {!pricing&&report.rows.length>8?<p className="paper-more">Showing 8 of {report.rows.length} rows. The download includes the complete schedule.</p>:null}
-      {pricing?<QuotationTotals estimate={quotationEstimate(plan,settings,prices)}/>:null}
+      {kind==='quote'?<QuotationTotals estimate={quotationEstimate(plan,settings,prices)}/>:null}
       <p className="paper-scope">{pricing?QUOTATION_EXCLUSIONS:'All sizes and positions in millimetres. Refer to the project details for coordinate conventions.'} Provisional quantities. Applied fascia recess: {Math.round(plan.frame.fasciaClearance*1000)} mm. Maximum metal end projection: {Math.round(Math.max(0,...plan.frame.projections.map(q=>q.distance))*1000)} mm; supplier limits and connections require confirmation.</p>
     </div></details>}
     <details className="csv-format-options"><summary>CSV format options</summary><ChoiceField<','|';'> label="CSV separator" ariaLabel="Column separator" value={delimiter} options={[{value:',',label:'Comma (,)'},{value:';',label:'Semicolon (;)'}]} onChange={setDelimiter}/></details>

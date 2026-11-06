@@ -1,40 +1,63 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
-import type { PDFPage } from 'pdf-lib'
+import { PDFDocument } from 'pdf-lib'
 import type { Plan, Settings } from './planner.ts'
 import { bounds } from './planner.ts'
-import { pdfBrand } from './pdfBrand.ts'
 import { exportQuotationPdf } from './quotationPdf.ts'
 import { exportInstallerPdf } from './installerPdf.ts'
 import { installerPlan } from './installerPlan.ts'
-import { quotationEstimate, quotationSummary, QUOTATION_EXCLUSIONS } from './quotationEstimate.ts'
+import { quotationEstimate } from './quotationEstimate.ts'
+import { sectionSpecification } from './quotationSections.ts'
+import { MM, QUOTE_COLOURS as c, quotationDocument, quoteMoney, quoteReference } from './quotationDocument.ts'
 
-const MM=72/25.4,green=rgb(.38,.42,.17),muted=rgb(.43,.47,.38),ink=rgb(.19,.23,.16)
-const safe=(s:string)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[–—]/g,'-').replace(/[‘’]/g,"'").replace(/[^\x20-\x7e\n€®²×°±·]/g,' ')
-export async function exportCustomerQuotePack(plan:Plan,s:Settings,prices:Record<string,string>,options:{now?:Date;logo?:Uint8Array;preview?:Uint8Array;planPreview?:Uint8Array;includeInstaller?:boolean}={}){
-  const doc=await PDFDocument.create(),font=await doc.embedFont(StandardFonts.Helvetica),bold=await doc.embedFont(StandardFonts.HelveticaBold),brand=await pdfBrand(doc,options.logo),now=options.now??new Date(),q=s.quotation??{},reference=q.projectReference?.trim()||installerPlan(plan,s).reference
-  const date=new Intl.DateTimeFormat('en-IE',{dateStyle:'medium',timeZone:'Europe/Dublin'}).format(now),estimate=quotationEstimate(plan,s,prices)
+export type CustomerQuotePackOptions={now?:Date;logo?:Uint8Array;preview?:Uint8Array;planPreview?:Uint8Array;includeInstaller?:boolean;sectionPreviews?:{id:string;preview?:Uint8Array;planPreview?:Uint8Array}[]}
+export async function exportCustomerQuotePack(plan:Plan,s:Settings,prices:Record<string,string>,options:CustomerQuotePackOptions={}){
+  const doc=await PDFDocument.create(),now=options.now??new Date(),q=s.quotation??{},reference=quoteReference(q,installerPlan(plan,s).reference),estimate=quotationEstimate(plan,s,prices)
   doc.setTitle(`BetterDeck® customer quotation · ${reference}`);doc.setAuthor('BetterDeck');doc.setCreator('BetterPlan');doc.setCreationDate(now);doc.setModificationDate(now)
-  const text=(p:PDFPage,value:string,x:number,y:number,size=3,strong=false,color=ink)=>p.drawText(safe(value),{x:x*MM,y:p.getHeight()-y*MM,size:size*MM,font:strong?bold:font,color})
-  const wrap=(value:string,width=180,size=3)=>{const result:string[]=[];for(const raw of safe(value).split('\n')){let line='';for(const char of raw){if(line&&font.widthOfTextAtSize(line+char,size*MM)>width*MM){const space=line.lastIndexOf(' ');if(space>line.length*.5){result.push(line.slice(0,space));line=line.slice(space+1)+char}else{result.push(line);line=char}}else line+=char}result.push(line)}return result}
-  let page:PDFPage,y=0
-  const next=(title:string)=>{page=doc.addPage([210*MM,297*MM]);brand(page);text(page,title,64,25,4.5,true,green);text(page,reference,14,40,2.8);text(page,date,153,40,2.8);y=53}
-  const paragraph=(value:string,size=3)=>{for(const line of wrap(value,180,size)){if(y>274)next('Project details - continued');text(page!,line,14,y,size);y+=size*1.6}y+=4}
-  next('Customer quotation')
-  for(const [label,value] of ([['Prepared for',q.customerName],['Customer address',q.customerAddress],['Eircode',q.customerEircode],['Site address',q.siteAddress]] as const))if(value?.trim()){if(y+15>274)next('Customer details - continued');text(page!,label,14,y,2.8,true,green);y+=6;paragraph(value)}
-  paragraph(`${Math.round(bounds(plan.physical).width*1000)} × ${Math.round(bounds(plan.physical).depth*1000)} mm overall · ${plan.area.toFixed(2)} m² · ${s.board.colourName}`)
-  for(const row of quotationSummary(estimate))paragraph(`${row.label}: ${row.cents===null?'Pending':`€${(row.cents/100).toFixed(2)}`}`,3.2)
-  if(options.preview){if(y+105>276)next('Your deck design');const image=await doc.embedPng(options.preview);page!.drawImage(image,{x:14*MM,y:page!.getHeight()-(y+101)*MM,width:182*MM,height:101*MM});y+=107}
-  if(q.notes?.trim()){if(y+15>276)next('Project notes');text(page!,'Quotation notes',14,y,3,true,green);y+=7;paragraph(q.notes)}
-  paragraph(QUOTATION_EXCLUSIONS,2.6)
-  const quotation=await PDFDocument.load(await exportQuotationPdf(plan,s,prices,{logo:options.logo,now}))
-  for(const p of await doc.copyPages(quotation,quotation.getPageIndices()))doc.addPage(p)
-  next('Deck layout plan')
-  paragraph('All dimensions in mm. Layout illustration: use the labelled dimensions and verify on site; this page is not a fixed-scale installation drawing.',2.8)
-  if(options.planPreview){const image=await doc.embedPng(options.planPreview);page!.drawImage(image,{x:14*MM,y:page!.getHeight()-224*MM,width:182*MM,height:126.4*MM})}
-  else{const b=bounds(plan.physical),scale=Math.min(170/b.width,145/b.depth);for(let i=0;i<plan.physical.length;i++){const a=plan.physical[i],b=plan.physical[(i+1)%plan.physical.length];page!.drawLine({start:{x:(20+a.x*scale)*MM,y:page!.getHeight()-(85+a.y*scale)*MM},end:{x:(20+b.x*scale)*MM,y:page!.getHeight()-(85+b.y*scale)*MM},color:green,thickness:MM*.4});text(page!,`${Math.round(Math.hypot(b.x-a.x,b.y-a.y)*1000)} mm`,20+(a.x+b.x)/2*scale,83+(a.y+b.y)/2*scale,2.6)}}
-  y=241;paragraph(`${Math.round(bounds(plan.physical).width*1000)} × ${Math.round(bounds(plan.physical).depth*1000)} mm overall · ${s.board.stock} m stock · ${s.board.width} × ${s.board.thickness} mm boards.`,2.8)
-  paragraph(plan.frame.geometryPass?'Support geometry checks pass. Pedestal capacities, connections and site conditions still require confirmation.':'Support layout unresolved. Frame, pedestal and joiner quantities remain pending.',2.8)
-  if(options.includeInstaller){if(!plan.frame.geometryPass)throw new Error('Resolve support geometry before adding installer schedules.');const installer=await PDFDocument.load(await exportInstallerPdf(plan,s,{logo:options.logo,now,includeReferences:false}));for(const p of await doc.copyPages(installer,installer.getPageIndices()))doc.addPage(p)}
-  const pages=doc.getPages();pages.forEach((p,i)=>{const w=p.getWidth()/MM,h=p.getHeight()/MM;p.drawRectangle({x:0,y:0,width:p.getWidth(),height:10*MM,color:rgb(1,1,1)});text(p,`BetterDeck® · ${reference}`,14,h-5,2.3,false,muted);text(p,`${i+1} / ${pages.length}`,w-27,h-5,2.3,false,muted)})
-  return doc.save()
+  const p=await quotationDocument(doc,reference,q,now,options.logo)
+  p.next('Your deck, beautifully planned')
+  if(q.customerName?.trim())p.paragraph(`Prepared for ${q.customerName}`,3.5,true)
+  if(q.customerAddress?.trim())p.paragraph(q.customerAddress,2.7)
+  if(q.customerEircode?.trim())p.paragraph(q.customerEircode,2.7)
+  if(q.siteAddress?.trim())p.paragraph(`Site: ${q.siteAddress}`,2.7)
+  if(options.preview){await p.image(options.preview,86);p.paragraph('Design illustration · Colours indicative · Priced extras are not shown in this model.',2.3,false,c.muted)}
+  else p.paragraph('See the dimensioned design on the layout pages.',2.8,false,c.muted)
+  p.paragraph(`${estimate.sections[0].name}${estimate.sections.length>1?` · ${estimate.sections.length} deck sections included in this quotation`:''}`,3.5,true,c.green)
+  for(const line of sectionSpecification(estimate.sections[0]))p.paragraph(line,2.7)
+  p.ensure(33);p.rect(16,p.y,178,29,c.green)
+  p.text(estimate.totalCents===null?'QUOTATION INCOMPLETE':'TOTAL INCLUDING VAT',21,p.y+8,2.7,true,c.white)
+  p.text(estimate.totalCents===null?'Pending':quoteMoney(estimate.totalCents),21,p.y+22,7,true,c.white)
+  p.y+=36
+  p.paragraph(estimate.totalCents===null?'Complete item rates, quantities and VAT to confirm the total.':`${q.fulfilment==='collection'?'For collection':'Includes entered delivery'} · VAT ${estimate.vatRate}% · Provisional quotation`,2.5,false,c.muted)
+  const quotation=await PDFDocument.load(await exportQuotationPdf(plan,s,prices,{logo:options.logo,now,omitFooter:true}))
+  for(const page of await doc.copyPages(quotation,quotation.getPageIndices()))doc.addPage(page)
+  for(const section of estimate.sections){
+    const preview=options.sectionPreviews?.find(i=>i.id===section.id)
+    p.next(`Deck layout · ${section.name}`)
+    if(section.id!=='current'){
+      if(preview?.preview)await p.image(preview.preview,55)
+      for(const line of sectionSpecification(section))p.paragraph(line,2.7)
+    }
+    p.paragraph('Dimensions in mm. Use labelled dimensions and verify on site. This illustration is not a fixed-scale installation drawing.',2.7,false,c.muted)
+    const layout=preview?.planPreview??(section.id==='current'?options.planPreview:undefined)
+    if(layout)await p.image(layout,section.id==='current'?137:85)
+    else{
+      const b=bounds(section.plan.physical),minX=Math.min(...section.plan.physical.map(a=>a.x)),minY=Math.min(...section.plan.physical.map(a=>a.y)),height=100,scale=Math.min(150/b.width,75/b.depth)
+      p.ensure(height+5)
+      for(let i=0;i<section.plan.physical.length;i++){
+        const a=section.plan.physical[i],b=section.plan.physical[(i+1)%section.plan.physical.length],x=(v:number)=>26+(v-minX)*scale,y=(v:number)=>p.y+10+(v-minY)*scale
+        p.page.drawLine({start:{x:x(a.x)*MM,y:p.page.getHeight()-y(a.y)*MM},end:{x:x(b.x)*MM,y:p.page.getHeight()-y(b.y)*MM},color:c.green,thickness:.4*MM})
+        p.text(`E${i+1}: ${Math.round(Math.hypot(b.x-a.x,b.y-a.y)*1000)} mm`,x((a.x+b.x)/2),y((a.y+b.y)/2)-2,2.3)
+      }
+      p.y+=height
+    }
+    if(section.id==='current')for(const line of sectionSpecification(section))p.paragraph(line,2.7)
+    p.paragraph(section.plan.frame.geometryPass?'Support geometry checks pass. Confirm pedestal capacities, connections and site conditions.':'Support layout unresolved. Frame, pedestal and connector quantities remain pending.',2.7,false,c.muted)
+  }
+  if(options.includeInstaller){
+    for(const section of estimate.sections){
+      if(!section.plan.frame.geometryPass)throw new Error('Resolve support geometry before adding installer schedules.')
+      const installer=await PDFDocument.load(await exportInstallerPdf(section.plan,section.settings,{logo:options.logo,now,includeReferences:false}))
+      for(const page of await doc.copyPages(installer,installer.getPageIndices()))doc.addPage(page)
+    }
+  }
+  p.footer();return doc.save()
 }
